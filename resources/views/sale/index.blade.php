@@ -284,7 +284,7 @@
                                 </td>
 
                                 <td class="text-center">
-                                    {{ $sale->sale_date->format('Y-m-d') }}
+                                    {{ \Carbon\Carbon::parse($sale->sale_date)->format('d-m-Y') }}
                                 </td>
 
                                 <td class="text-center">

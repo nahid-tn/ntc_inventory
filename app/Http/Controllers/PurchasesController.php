@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use Illuminate\Http\Request;
 use App\Models\Supplier;
 use App\Models\Product;
@@ -10,16 +11,55 @@ use App\Models\PurchaseDetail;
 use App\Models\SupplierPayment;
 use App\Models\PurchaseReturn;
 use App\Models\PurchaseReturnItem;
-use App\Models\unit;
-use Barryvdh\DomPDF\Facade\Pdf; // use this at top
+use App\Models\CompanyInfo;
+use App\Models\Unit;
+use Mpdf\Mpdf;
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
 use Carbon\Carbon;
+use Picqer\Barcode\BarcodeGeneratorPNG;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class PurchasesController extends Controller
 {
+    /**
+     * mPDF ইনস্ট্যান্স তৈরি করার হেল্পার
+     */
+    private function createMpdf()
+    {
+        $defaultConfig = (new ConfigVariables())->getDefaults();
+        $fontDirs = $defaultConfig['fontDir'];
+
+        $defaultFontConfig = (new FontVariables())->getDefaults();
+        $fontData = $defaultFontConfig['fontdata'];
+
+        return new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'default_font' => 'solaimanlipi',
+            'fontDir' => array_merge($fontDirs, [
+                public_path('fonts'),
+            ]),
+            'fontdata' => $fontData + [
+                'solaimanlipi' => [
+                    'R' => 'SolaimanLipi.ttf',
+                    'B' => 'SolaimanLipi.ttf',
+                    'useOTL' => 0xFF,
+                    'useKashida' => 75,
+                ]
+            ],
+            'margin_top' => 15,
+            'margin_right' => 10,
+            'margin_bottom' => 15,
+            'margin_left' => 10,
+            'tempDir' => storage_path('app/temp'),
+        ]);
+    }
+
     public function index(Request $request)
     {
         $units = Unit::all();
-
+        $companyInfo = CompanyInfo::first();
         $query = Purchase::with([
             'supplier',
             'details.product',
@@ -55,35 +95,32 @@ class PurchasesController extends Controller
 
         // ================= TOTAL PURCHASE =================
         $newPurchase = (clone $query)->sum('subtotal');
-        $oldProductPurchases = DB::table('old_product_purchase_details')->sum('total_amount'); 
+        $oldProductPurchases = DB::table('old_product_purchase_details')->sum('total_amount');
         $totalPurchase = $newPurchase + $oldProductPurchases;
 
-        $oldPurchasesPayment= DB::table('old_product_purchases')->sum('total');
+        $oldPurchasesPayment = DB::table('old_product_purchases')->sum('total');
 
         // ================= TOTAL PAYMENT =================
         $totalSupplierPayment = SupplierPayment::whereIn('purchase_id', $purchaseIds)
             ->sum('amount');
         $totalSupplierPaymentTSP = DB::table('supplier_payments')->sum('amount');
+        
         // ================= TOTAL RETURN =================
         $totalReturnAmount = PurchaseReturn::whereIn('invoice_no', $purchaseIds)
             ->sum('total_amount');
-    //     $totalReturnAmount = PurchaseReturn::whereIn('purchase_return_id', $purchaseIds)
-    // ->sum('total_amount');
 
         // ================= TOTAL PAID =================
         $totalPaidWithTotalReturn = $totalSupplierPayment + $totalReturnAmount + $oldPurchasesPayment;
-        $totalDue_D= $totalPurchase - $totalSupplierPaymentTSP;
-        $totalPaymentReturn= $totalSupplierPaymentTSP + $totalReturnAmount;
+        $totalDue_D = $totalPurchase - $totalSupplierPaymentTSP;
+        $totalPaymentReturn = $totalSupplierPaymentTSP + $totalReturnAmount;
+        
         // ================= TOTAL DUE =================
         $totalDue = $totalPurchase - $totalPaymentReturn;
 
         // ================= PARTIAL PAYMENT COUNT =================
         $partialCount = (clone $query)->get()->filter(function ($purchase) {
-
             $paid = $purchase->supplierPayments->sum('amount');
-
             return $paid > 0 && $paid < $purchase->total_amount;
-
         })->count();
 
         // ================= PURCHASE LIST =================
@@ -107,202 +144,240 @@ class PurchasesController extends Controller
             'oldPurchasesPayment',
             'totalDue',
             'partialCount',
-            'units'
+            'units',
+            'companyInfo'
         ));
     }
 
     public function PurchaseForm()
     {
         $units = Unit::all();
-        $suppliers = Supplier::where('status','active')
-        ->orderBy('supplier_name')->get();
-        $products  = Product::all();
-        return view('purchase.create', compact('suppliers', 'products','units'));
+        $suppliers = Supplier::where('status', 'active')
+            ->orderBy('supplier_name')->get();
+        $products = Product::all();
+        $companyInfo = CompanyInfo::first();
+        return view('purchase.create', compact('suppliers', 'products', 'units', 'companyInfo'));
     }
-
 
     // public function store(Request $request)
     // {
     //     $request->validate([
     //         'supplier_id' => 'required|exists:suppliers,id',
-    //         'date'        => 'required|date',
+    //         'date' => 'required|date',
     //         'payment_method' => 'required|string',
+    //         'products' => 'required|array',
     //         'products.*.product_id' => 'required|exists:products,id',
-    //         'products.*.qty'  => 'required|numeric|min:1',
+    //         'products.*.qty' => 'required|numeric|min:1',
     //         'products.*.unit' => 'required|string',
-    //         'products.*.price'=> 'required|numeric|min:0',
+    //         'products.*.price' => 'required|numeric|min:0',
     //     ]);
 
     //     DB::transaction(function () use ($request) {
 
-    //         // Auto invoice
-    //         $invoice = $request->Invoice ?? 'INV-' . str_pad((Purchase::latest('id')->first()?->id ?? 0) + 1, 6, '0', STR_PAD_LEFT);
+    //         // Auto Invoice
+    //         $invoice = 'INV-' . str_pad(
+    //             (Purchase::latest('id')->first()?->id ?? 0) + 1,
+    //             6,
+    //             '0',
+    //             STR_PAD_LEFT
+    //         );
 
-    //         // Calculate subtotal, tax, total
+    //         // Calculation
     //         $subtotal = collect($request->products)->sum(fn($p) => $p['qty'] * $p['price']);
     //         $taxPercent = $request->tax_percentage ?? 0;
-    //         $taxAmount  = ($subtotal * $taxPercent) / 100;
-    //         $shipping   = $request->shipping_amount ?? 0;
+    //         $taxAmount = ($subtotal * $taxPercent) / 100;
+    //         $shipping = $request->shipping_amount ?? 0;
     //         $total = $subtotal + $taxAmount + $shipping;
 
-    //         // Create purchase
+    //         // Create Purchase
     //         $purchase = Purchase::create([
-    //             'Invoice_no'      => $invoice,
-    //             'purchase_order_no'=> $request->purchase_order_no,
-    //             'supplier_id'     => $request->supplier_id,
-    //             'date'            => $request->date,
-    //             'subtotal'        => $subtotal,
-    //             'tax_percentage'  => $taxPercent,
-    //             'tax_amount'      => $taxAmount,
+    //             'Invoice_no' => $invoice,
+    //             'purchase_order_no' => $request->purchase_order_no,
+    //             'supplier_id' => $request->supplier_id,
+    //             'date' => $request->date,
+    //             'subtotal' => $subtotal,
+    //             'tax_percentage' => $taxPercent,
+    //             'tax_amount' => $taxAmount,
     //             'shipping_amount' => $shipping,
-    //             'total_amount'    => $total,
-    //             'payment_method'  => $request->payment_method,
+    //             'total_amount' => $total,
+    //             'payment_method' => $request->payment_method,
     //         ]);
 
-    //         // Save purchase details & update stock
+    //         // Save Details + Update Stock
     //         foreach ($request->products as $item) {
     //             PurchaseDetail::create([
     //                 'purchase_id' => $purchase->id,
-    //                 'product_id'  => $item['product_id'],
-    //                 'qty'         => $item['qty'],
-    //                 'unit'        => $item['unit'],
-    //                 'price'       => $item['price'],
-    //                 'total'       => $item['qty'] * $item['price'],
+    //                 'product_id' => $item['product_id'],
+    //                 'qty' => $item['qty'],
+    //                 'unit' => $item['unit'],
+    //                 'price' => $item['price'],
+    //                 'total' => $item['qty'] * $item['price'],
     //             ]);
 
-    //             Product::where('id', $item['product_id'])
-    //                 ->increment('stock', $item['qty']);
+    //             $product = Product::find($item['product_id']);
+    //             if ($product) {
+    //                 $product->increment('stock', $item['qty']);
+    //             }
     //         }
 
-    //         // Optional initial payment
+    //         // Payment
     //         $paid = (float) ($request->paid_amount ?? 0);
     //         if ($paid > 0) {
     //             SupplierPayment::create([
-    //                 'supplier_id'   => $purchase->supplier_id,
-    //                 'purchase_id'   => $purchase->id,
-    //                 'payment_date'  => $request->date,
-    //                 'amount'        => $paid,
-    //                 'BankName'      => $request->BankName ?? null,
-    //                 'account_number'=> $request->account_number ?? null,
-    //                 'cheque_number' => $request->cheque_number ?? null,
-    //                 'transaction_number' => $request->transaction_number ?? null,
-    //                 'note'          => 'Initial Purchase Payment',
+    //                 'supplier_id' => $purchase->supplier_id,
+    //                 'purchase_id' => $purchase->id,
+    //                 'payment_date' => $request->date,
+    //                 'amount' => $paid,
+    //                 'BankName' => $request->BankName,
+    //                 'account_number' => $request->account_number,
+    //                 'cheque_number' => $request->cheque_number,
+    //                 'transaction_number' => $request->transaction_number,
+    //                 'note' => 'Initial Payment',
     //             ]);
     //         }
     //     });
 
-    //     return redirect()->route('purchase.index')->with('success', 'Purchase Created Successfully');
+    //     return redirect()->route('purchase.index')
+    //         ->with('success', 'Purchase Created Successfully');
     // }
     public function store(Request $request)
-    {
-        $request->validate([
-            'supplier_id' => 'required|exists:suppliers,id',
-            'date' => 'required|date',
-            'payment_method' => 'required|string',
+{
+    $request->validate([
+        'supplier_id' => 'required|exists:suppliers,id',
+        'date' => 'required|date',
+        'payment_method' => 'required|string',
+        'products' => 'required|array',
+        'products.*.product_id' => 'required|exists:products,id',
+        'products.*.qty' => 'required|numeric|min:1',
+        'products.*.unit' => 'required|string',
+        'products.*.price' => 'required|numeric|min:0',
+    ]);
 
-            'products' => 'required|array',
-            'products.*.product_id' => 'required|exists:products,id',
-            'products.*.qty' => 'required|numeric|min:1',
-            'products.*.unit' => 'required|string',
-            'products.*.price' => 'required|numeric|min:0',
+    DB::transaction(function () use ($request) {
+
+        // =====================
+        // AUTO INVOICE
+        // =====================
+        $invoice = 'INV-' . str_pad(
+            (Purchase::latest('id')->first()?->id ?? 0) + 1,
+            6,
+            '0',
+            STR_PAD_LEFT
+        );
+
+        // =====================
+        // CALCULATION
+        // =====================
+        $subtotal = collect($request->products)
+            ->sum(fn($p) => $p['qty'] * $p['price']);
+
+        $taxPercent = $request->tax_percentage ?? 0;
+        $taxAmount = ($subtotal * $taxPercent) / 100;
+        $shipping = $request->shipping_amount ?? 0;
+
+        $total = $subtotal + $taxAmount + $shipping;
+
+        // =====================
+        // CREATE PURCHASE
+        // =====================
+        $purchase = Purchase::create([
+            'Invoice_no' => $invoice,
+            'purchase_order_no' => $request->purchase_order_no,
+            'supplier_id' => $request->supplier_id,
+            'date' => $request->date,
+            'subtotal' => $subtotal,
+            'tax_percentage' => $taxPercent,
+            'tax_amount' => $taxAmount,
+            'shipping_amount' => $shipping,
+            'total_amount' => $total,
+            'payment_method' => $request->payment_method,
         ]);
 
-        DB::transaction(function () use ($request) {
+        // =====================
+        // BARCODE GENERATOR
+        // =====================
+        $generator = new BarcodeGeneratorPNG();
 
-            // Auto Invoice
-            $invoice = 'INV-' . str_pad(
-                (Purchase::latest('id')->first()?->id ?? 0) + 1,
-                6,
-                '0',
-                STR_PAD_LEFT
+        // =====================
+        // SAVE DETAILS + STOCK + QR/BARCODE
+        // =====================
+        foreach ($request->products as $item) {
+
+            $detail = new PurchaseDetail();
+
+            $detail->purchase_id = $purchase->id;
+            $detail->product_id = $item['product_id'];
+            $detail->qty = $item['qty'];
+            $detail->unit = $item['unit'];
+            $detail->price = $item['price'];
+            $detail->total = $item['qty'] * $item['price'];
+
+            // =====================
+            // UNIQUE CODE
+            // =====================
+            $uniqueCode = 'PR-' . $purchase->id . '-' . $item['product_id'] . '-' . time();
+
+            // =====================
+            // BARCODE
+            // =====================
+            $detail->barcode = base64_encode(
+                $generator->getBarcode($uniqueCode, $generator::TYPE_CODE_128)
             );
 
-            // Calculation
-            $subtotal = collect($request->products)->sum(fn($p) => $p['qty'] * $p['price']);
+            // =====================
+            // QR CODE (SCAN URL)
+            // =====================
+            // $qrUrl = url('/purchase-item/' . $uniqueCode);
 
-            $taxPercent = $request->tax_percentage ?? 0;
-            $taxAmount = ($subtotal * $taxPercent) / 100;
+            // $detail->qr_code = base64_encode(
+            //     QrCode::format('png')->size(150)->generate($qrUrl)
+            // );
 
-            $shipping = $request->shipping_amount ?? 0;
+            $detail->save();
 
-            $total = $subtotal + $taxAmount + $shipping;
-
-            // Create Purchase
-            $purchase = Purchase::create([
-                'Invoice_no' => $invoice,
-                'purchase_order_no' => $request->purchase_order_no,
-                'supplier_id' => $request->supplier_id,
-                'date' => $request->date,
-                'subtotal' => $subtotal,
-                'tax_percentage' => $taxPercent,
-                'tax_amount' => $taxAmount,
-                'shipping_amount' => $shipping,
-                'total_amount' => $total,
-                'payment_method' => $request->payment_method,
-            ]);
-
-            // Save Details + Update Stock
-            foreach ($request->products as $item) {
-
-                PurchaseDetail::create([
-                    'purchase_id' => $purchase->id,
-                    'product_id' => $item['product_id'],
-                    'qty' => $item['qty'],
-                    'unit' => $item['unit'],
-                    'price' => $item['price'],
-                    'total' => $item['qty'] * $item['price'],
-                ]);
-
-                // ✅ STOCK INCREASE FIX
-                $product = Product::find($item['product_id']);
-
-                if ($product) {
-                    $product->increment('stock', $item['qty']);
-                }
+            // =====================
+            // STOCK UPDATE (NO CHANGE)
+            // =====================
+            $product = Product::find($item['product_id']);
+            if ($product) {
+                $product->increment('stock', $item['qty']);
             }
-
-            // Payment
-            $paid = (float) ($request->paid_amount ?? 0);
-
-            if ($paid > 0) {
-                SupplierPayment::create([
-                    'supplier_id' => $purchase->supplier_id,
-                    'purchase_id' => $purchase->id,
-                    'payment_date' => $request->date,
-                    'amount' => $paid,
-                    'BankName' => $request->BankName,
-                    'account_number' => $request->account_number,
-                    'cheque_number' => $request->cheque_number,
-                    'transaction_number' => $request->transaction_number,
-                    'note' => 'Initial Payment',
-                ]);
-            }
-        });
-
-        return redirect()->route('purchase.index')
-            ->with('success', 'Purchase Created Successfully');
-    }
-    
-    private function calculateSubtotal($products)
-    {
-        $subtotal = 0;
-        foreach ($products as $item) {
-            $subtotal += $item['qty'] * $item['price'];
         }
-        return $subtotal;
-    }
 
+        // =====================
+        // PAYMENT (NO CHANGE)
+        // =====================
+        $paid = (float) ($request->paid_amount ?? 0);
+
+        if ($paid > 0) {
+            SupplierPayment::create([
+                'supplier_id' => $purchase->supplier_id,
+                'purchase_id' => $purchase->id,
+                'payment_date' => $request->date,
+                'amount' => $paid,
+                'BankName' => $request->BankName,
+                'account_number' => $request->account_number,
+                'cheque_number' => $request->cheque_number,
+                'transaction_number' => $request->transaction_number,
+                'note' => 'Initial Payment',
+            ]);
+        }
+    });
+
+    return redirect()->route('purchase.index')
+        ->with('success', 'Purchase Created Successfully');
+}
     public function edit($id)
     {
-        $purchase = Purchase::with('details.product','supplier')->findOrFail($id);
+        $purchase = Purchase::with('details.product', 'supplier')->findOrFail($id);
 
         $suppliers = Supplier::all();
-        $products  = Product::all();
-        $units     = Unit::all();
-
+        $products = Product::all();
+        $units = Unit::all();
+        $companyInfo = CompanyInfo::first();
         // SupplierPayment থেকে Paid Amount
         $paidAmount = SupplierPayment::where('purchase_id', $purchase->id)
-                        ->sum('amount');
+            ->sum('amount');
 
         // Due Calculation
         $totalDue = $purchase->total_amount - $paidAmount;
@@ -313,18 +388,17 @@ class PurchasesController extends Controller
             'products',
             'units',
             'paidAmount',
-            'totalDue'
+            'totalDue',
+            'companyInfo'
         ));
     }
 
-   
     public function update(Request $request, $id)
     {
         $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'date' => 'required|date',
             'payment_method' => 'required|string',
-
             'products' => 'required|array',
             'products.*.product_id' => 'required|exists:products,id',
             'products.*.qty' => 'required|numeric|min:1',
@@ -336,7 +410,7 @@ class PurchasesController extends Controller
 
             $purchase = Purchase::with('details')->findOrFail($id);
 
-            // 🔴 STEP 1: Reverse Old Stock
+            // STEP 1: Reverse Old Stock
             foreach ($purchase->details as $oldItem) {
                 $product = Product::find($oldItem->product_id);
                 if ($product) {
@@ -344,25 +418,22 @@ class PurchasesController extends Controller
                 }
             }
 
-            // 🔴 STEP 2: Delete Old Details
+            // STEP 2: Delete Old Details
             $purchase->details()->delete();
 
-            // 🔴 STEP 3: Delete Old Payment
+            // STEP 3: Delete Old Payment
             SupplierPayment::where('purchase_id', $purchase->id)->delete();
 
-            // 🔵 STEP 4: Recalculate totals (same as store)
+            // STEP 4: Recalculate totals
             $subtotal = collect($request->products)->sum(fn($p) => $p['qty'] * $p['price']);
-
             $taxPercent = $request->tax_percentage ?? 0;
             $taxAmount = ($subtotal * $taxPercent) / 100;
-
             $shipping = $request->shipping_amount ?? 0;
-
             $total = $subtotal + $taxAmount + $shipping;
 
-            // 🔵 STEP 5: Update Purchase
+            // STEP 5: Update Purchase
             $purchase->update([
-                'Invoice_no' => $request->Invoice_no ?? $purchase->Invoice_no, // keep old if not given
+                'Invoice_no' => $request->Invoice_no ?? $purchase->Invoice_no,
                 'purchase_order_no' => $request->purchase_order_no,
                 'supplier_id' => $request->supplier_id,
                 'date' => $request->date,
@@ -374,9 +445,8 @@ class PurchasesController extends Controller
                 'payment_method' => $request->payment_method,
             ]);
 
-            // 🔵 STEP 6: Insert New Details + Update Stock
+            // STEP 6: Insert New Details + Update Stock
             foreach ($request->products as $item) {
-
                 PurchaseDetail::create([
                     'purchase_id' => $purchase->id,
                     'product_id' => $item['product_id'],
@@ -386,16 +456,14 @@ class PurchasesController extends Controller
                     'total' => $item['qty'] * $item['price'],
                 ]);
 
-                // ✅ STOCK UPDATE (same as store)
                 $product = Product::find($item['product_id']);
                 if ($product) {
                     $product->increment('stock', $item['qty']);
                 }
             }
 
-            // 🔵 STEP 7: Save Payment Again
+            // STEP 7: Save Payment Again
             $paid = (float) ($request->paid_amount ?? 0);
-
             if ($paid > 0) {
                 SupplierPayment::create([
                     'supplier_id' => $purchase->supplier_id,
@@ -416,79 +484,259 @@ class PurchasesController extends Controller
             ->with('success', 'Purchase Updated Successfully');
     }
 
+    // public function view($id)
+    // {
+    //     $purchase = Purchase::with('details.product', 'supplier', 'payments')->findOrFail($id);
+    //     $companyInfo = CompanyInfo::first();
+    //     return view('purchase.view', compact('purchase', 'companyInfo'));
+    // }
     public function view($id)
+{
     {
-        $purchase = Purchase::with('details.product', 'supplier', 'payments')->findOrFail($id);
-        return view('purchase.view', compact('purchase'));
+    $purchase = Purchase::with(
+        'details.product',
+        'supplier',
+        'payments'
+    )->findOrFail($id);
+
+    $companyInfo = CompanyInfo::first();
+
+    $generator = new BarcodeGeneratorPNG();
+
+    foreach ($purchase->details as $detail) {
+
+        if (!empty($detail->barcode)) {
+
+            $detail->barcode_image = base64_encode(
+                $generator->getBarcode(
+                    $detail->barcode,
+                    $generator::TYPE_CODE_128
+                )
+            );
+        }
     }
 
+    return view(
+        'purchase.view',
+        compact(
+            'purchase',
+            'companyInfo'
+        )
+    );
+}
+}
+    // public function downloadPdf($id)
+    // {
+    //     $purchase = Purchase::with('details.product', 'supplier')->findOrFail($id);
+        
+    //     $html = view('purchase.pdf', compact('purchase'))->render();
+        
+    //     $mpdf = $this->createMpdf();
+    //     $mpdf->WriteHTML($html);
+        
+    //     return $mpdf->Output('Purchase_Invoice_' . $purchase->Invoice_no . '.pdf', 'D');
+    // }
+//    public function downloadPdf($id)
+// {
+//     // =========================
+//     // LOAD PURCHASE DATA
+//     // =========================
+//     $purchase = Purchase::with([
+//         'details.product',
+//         'supplier',
+//         'payments'
+//     ])->findOrFail($id);
+//     // =========================
+//     // LOAD COMPANY INFO (IMPORTANT FIX)
+//     // =========================
+//     $companyInfo = CompanyInfo::first();
+//     // =========================
+//     // BARCODE GENERATE
+//     // =========================
+//     $generator = new BarcodeGeneratorPNG();
+//     $barcode = base64_encode(
+//         $generator->getBarcode($purchase->Invoice_no.'|'.$purchase->supplier->supplier_name.'|NTC', $generator::TYPE_CODE_128)
+//     );
+//     // =========================
+//     // RENDER VIEW
+//     // =========================
+//     $html = view('purchase.pdf', compact(
+//         'purchase',
+//         'barcode',
+//         'companyInfo'   // 🔥 MUST PASS
+//     ))->render();
+//     // =========================
+//     // MPDF CONFIG (BANGLA FIXED)
+//     // =========================
+//     $defaultConfig = (new ConfigVariables())->getDefaults();
+//     $fontDirs = $defaultConfig['fontDir'];
+//     $defaultFontConfig = (new FontVariables())->getDefaults();
+//     $fontData = $defaultFontConfig['fontdata'];
+//     $mpdf = new Mpdf([
+//         'mode' => 'utf-8',
+//         'format' => 'A4',
+//         'autoScriptToLang' => true,
+//         'autoLangToFont' => true,
+//         'fontDir' => array_merge($fontDirs, [
+//             public_path('fonts')
+//         ]),
+//         'fontdata' => $fontData + [
+//             'solaimanlipi' => [
+//                 'R' => 'SolaimanLipi.ttf',
+//                 'useOTL' => 0xFF,
+//                 'useKashida' => 75,
+//             ]
+//         ],
+//         'default_font' => 'solaimanlipi',
+//         'margin_left' => 10,
+//         'margin_right' => 10,
+//         'margin_top' => 10,
+//         'margin_bottom' => 10,
+//     ]);
+//     // =========================
+//     // OUTPUT
+//     // =========================
+//     $mpdf->WriteHTML($html);
+//     return $mpdf->Output(
+//         'Purchase_Invoice_' . $purchase->Invoice_no . '.pdf',
+//         'D'
+//     );
+// }
     public function downloadPdf($id)
-    {
-        $purchase = Purchase::with('details.product', 'supplier')->findOrFail($id);
-        $pdf = Pdf::loadView('purchase.pdf', compact('purchase'));
-        return $pdf->download('Purchase_Invoice_'.$purchase->Invoice_no.'.pdf');
+{
+    // =========================
+    // LOAD PURCHASE DATA
+    // =========================
+    $purchase = Purchase::with([
+        'details.product',
+        'supplier',
+        'payments'
+    ])->findOrFail($id);
+
+    // =========================
+    // LOAD COMPANY INFO
+    // =========================
+    $companyInfo = CompanyInfo::first();
+
+    // =========================
+    // INVOICE BARCODE
+    // =========================
+    $generator = new BarcodeGeneratorPNG();
+
+    $barcode = base64_encode(
+        $generator->getBarcode(
+            $purchase->Invoice_no . '|' .
+            $purchase->supplier->supplier_name . '|NTC',
+            $generator::TYPE_CODE_128
+        )
+    );
+
+    // =========================
+    // PRODUCT BARCODES
+    // =========================
+    foreach ($purchase->details as $detail) {
+
+        if (!empty($detail->barcode)) {
+
+            $detail->barcode_image = base64_encode(
+                $generator->getBarcode(
+                    $detail->barcode,
+                    $generator::TYPE_CODE_128
+                )
+            );
+
+        } else {
+
+            $detail->barcode_image = null;
+        }
     }
 
+    // =========================
+    // RENDER VIEW
+    // =========================
+    $html = view('purchase.pdf', compact(
+        'purchase',
+        'barcode',
+        'companyInfo'
+    ))->render();
+
+    // =========================
+    // MPDF CONFIG
+    // =========================
+    $defaultConfig = (new ConfigVariables())->getDefaults();
+    $fontDirs = $defaultConfig['fontDir'];
+
+    $defaultFontConfig = (new FontVariables())->getDefaults();
+    $fontData = $defaultFontConfig['fontdata'];
+
+    $mpdf = new Mpdf([
+        'mode' => 'utf-8',
+        'format' => 'A4',
+        'autoScriptToLang' => true,
+        'autoLangToFont' => true,
+
+        'fontDir' => array_merge($fontDirs, [
+            public_path('fonts')
+        ]),
+
+        'fontdata' => $fontData + [
+            'solaimanlipi' => [
+                'R' => 'SolaimanLipi.ttf',
+                'useOTL' => 0xFF,
+                'useKashida' => 75,
+            ]
+        ],
+
+        'default_font' => 'solaimanlipi',
+
+        'margin_left' => 10,
+        'margin_right' => 10,
+        'margin_top' => 10,
+        'margin_bottom' => 10,
+    ]);
+
+    $mpdf->WriteHTML($html);
+
+    return $mpdf->Output(
+        'Purchase_Invoice_' . $purchase->Invoice_no . '.pdf',
+        'D'
+    );
+}
     public function destroy($id)
     {
-    DB::transaction(function () use ($id) {
-        $purchase = Purchase::with('details')->findOrFail($id);
-        foreach ($purchase->details as $item) {
-            Product::where('id', $item->product_id)
-                ->decrement('stock', $item->qty);
-        }
-        $purchase->details()->delete();
-        $purchase->delete();
-    });
+        DB::transaction(function () use ($id) {
+            $purchase = Purchase::with('details')->findOrFail($id);
+            foreach ($purchase->details as $item) {
+                Product::where('id', $item->product_id)
+                    ->decrement('stock', $item->qty);
+            }
+            $purchase->details()->delete();
+            $purchase->delete();
+        });
 
-    return redirect()->route('purchase.index')
-        ->with('success', 'Purchase Deleted Successfully');
+        return redirect()->route('purchase.index')
+            ->with('success', 'Purchase Deleted Successfully');
     }
 
-    // public function supplierDues(Request $request)
-    // {
-    //     $query = Purchase::with('supplier')
-    //         ->where('due_amount', '>', 0)
-    //         ->where(function ($q) use ($request) {
-    //             if ($request->supplier) {
-    //                 $q->orWhereHas('supplier', function ($s) use ($request) {
-    //                     $s->where('supplier_name', 'like', '%' . $request->supplier . '%');
-    //                 });
-    //             }
-    //             if ($request->invoice) {
-    //                 $q->orWhere('Invoice_no', 'like', '%' . $request->invoice . '%');
-    //             }
-    //             if ($request->from && $request->to) {
-    //                 $q->orWhereBetween('date', [$request->from, $request->to]);
-    //             }
-    //         });
-    //     $dues = $query->orderBy('date')->get();
-    //     return view('purchase.supplier_dues', compact('dues'));
-    // }
+    public function supplierDues(Request $request)
+    {
+        $purchases = Purchase::with(['supplier', 'payments'])->get();
 
-        public function supplierDues(Request $request)
-{
-    $purchases = Purchase::with(['supplier', 'payments'])->get();
+        // Calculate due for each purchase (shipping excluded + partial payments)
+        $purchases = $purchases->map(function ($purchase) {
+            $totalWithoutShipping = ($purchase->total_amount ?? 0) - ($purchase->shipping_amount ?? 0);
+            $paidSoFar = SupplierPayment::where('purchase_id', $purchase->id)->sum('amount');
+            $purchase->due_amount = $totalWithoutShipping - $paidSoFar;
+            return $purchase;
+        });
 
-    // Calculate due for each purchase (shipping excluded + partial payments)
-    $purchases = $purchases->map(function($purchase){
+        // Filter only dues > 0
+        $dues = $purchases->filter(function ($purchase) {
+            return $purchase->due_amount > 0;
+        });
 
-        $totalWithoutShipping = ($purchase->total_amount ?? 0) - ($purchase->shipping_amount ?? 0);
-
-        $paidSoFar = SupplierPayment::where('purchase_id', $purchase->id)->sum('amount');
-
-        $purchase->due_amount = $totalWithoutShipping - $paidSoFar;
-
-        return $purchase;
-    });
-
-    // Filter only dues > 0
-    $dues = $purchases->filter(function($purchase){
-        return $purchase->due_amount > 0;
-    });
-
-    return view('purchase.supplier_dues', compact('dues'));
-}
+        return view('purchase.supplier_dues', compact('dues'));
+    }
 
     public function invoiceAutocomplete(Request $request)
     {
@@ -496,9 +744,7 @@ class PurchasesController extends Controller
         $invoices = Purchase::where('Invoice_no', 'like', "%{$term}%")
             ->limit(10)
             ->pluck('Invoice_no');
-        if ($request->invoice) {
-        $query->where('Invoice_no', 'like', '%' . $request->invoice . '%');
-        }
+            
         return response()->json(
             $invoices->map(fn($inv) => [
                 'label' => $inv,
@@ -514,23 +760,26 @@ class PurchasesController extends Controller
             'payment_method' => 'required|string',
             'payment_date' => 'nullable|date',
         ]);
+        
         $purchase = Purchase::findOrFail($id);
         $payment = SupplierPayment::create([
-            'supplier_id'    => $purchase->supplier_id,
-            'purchase_id'    => $purchase->id,
-            'amount'         => $request->amount,
+            'supplier_id' => $purchase->supplier_id,
+            'purchase_id' => $purchase->id,
+            'amount' => $request->amount,
             'payment_method' => $request->payment_method,
-            'payment_date'   => $request->payment_date ?? Carbon::now(),
-            'note'           => 'Additional Payment',
+            'payment_date' => $request->payment_date ?? Carbon::now(),
+            'note' => 'Additional Payment',
         ]);
+        
         $totalPaid = $purchase->payments()->sum('amount');
         $purchase->update([
             'paid_amount' => $totalPaid,
-            'due_amount'  => $purchase->total_amount - $totalPaid,
+            'due_amount' => $purchase->total_amount - $totalPaid,
         ]);
-        return redirect()->back()->with('success','Payment added successfully');
+        
+        return redirect()->back()->with('success', 'Payment added successfully');
     }
-    
+
     public function invoiceInfo($id)
     {
         $purchase = Purchase::with('payments')->find($id);
@@ -538,23 +787,24 @@ class PurchasesController extends Controller
             return response()->json(['error' => 'Invoice not found'], 404);
         }
         return response()->json([
-            'Invoice_no'   => $purchase->Invoice_no,
-            'date'         => $purchase->date ? $purchase->date->format('d-m-Y') : '',
+            'Invoice_no' => $purchase->Invoice_no,
+            'date' => $purchase->date ? $purchase->date->format('d-m-Y') : '',
             'total_amount' => $purchase->total_amount,
-            'paid_amount'  => $purchase->paid_amount,
-            'due_amount'   => $purchase->due_amount,
-            'payments'     => $purchase->payments->map(function($p){
+            'paid_amount' => $purchase->paid_amount,
+            'due_amount' => $purchase->due_amount,
+            'payments' => $purchase->payments->map(function ($p) {
                 return [
-                    'payment_date'   => $p->payment_date ? $p->payment_date->format('d-m-Y') : '',
-                    'amount'         => $p->amount,
+                    'payment_date' => $p->payment_date ? $p->payment_date->format('d-m-Y') : '',
+                    'amount' => $p->amount,
                     'payment_method' => $p->payment_method,
                 ];
             }),
         ]);
     }
+
     public function showInvoice($id)
     {
-        $purchase = Purchase::with('items.product')->findOrFail($id);
+        $purchase = Purchase::with('details.product')->findOrFail($id);
         return view('purchase.invoice', compact('purchase'));
     }
 
@@ -565,139 +815,134 @@ class PurchasesController extends Controller
         if ($request->filled('supplier_id')) {
             $supplier = Supplier::find($request->supplier_id);
         } elseif ($request->filled('supplier')) {
-            $supplier = Supplier::where('supplier_name', 'like', '%'.$request->supplier.'%')->first();
+            $supplier = Supplier::where('supplier_name', 'like', '%' . $request->supplier . '%')->first();
         }
 
         $from = $request->from;
-        $to   = $request->to;
+        $to = $request->to;
 
         /* ================= Opening Balance ================= */
-
-        $openingPurchase = Purchase::when($supplier, fn($q)=>$q->where('supplier_id',$supplier->id))
-            ->when($from, fn($q)=>$q->whereDate('date','<',$from))
+        $openingPurchase = Purchase::when($supplier, fn($q) => $q->where('supplier_id', $supplier->id))
+            ->when($from, fn($q) => $q->whereDate('date', '<', $from))
             ->sum('total_amount');
 
-        $openingReturn = PurchaseReturn::when($supplier, fn($q)=>$q->where('supplier_id',$supplier->id))
-            ->when($from, fn($q)=>$q->whereDate('return_date','<',$from))
+        $openingReturn = PurchaseReturn::when($supplier, fn($q) => $q->where('supplier_id', $supplier->id))
+            ->when($from, fn($q) => $q->whereDate('return_date', '<', $from))
             ->sum('total_amount');
 
-        $openingPayment = SupplierPayment::when($supplier, fn($q)=>$q->where('supplier_id',$supplier->id))
-            ->when($from, fn($q)=>$q->whereDate('payment_date','<',$from))
+        $openingPayment = SupplierPayment::when($supplier, fn($q) => $q->where('supplier_id', $supplier->id))
+            ->when($from, fn($q) => $q->whereDate('payment_date', '<', $from))
             ->sum('amount');
 
         // Credit - Debit
         $openingBalance = ($openingPayment + $openingReturn) - $openingPurchase;
 
-
         /* ================= Fetch Data ================= */
-
-        $purchases = Purchase::with('items.product')
-            ->when($supplier, fn($q)=>$q->where('supplier_id',$supplier->id))
-            ->when($from, fn($q)=>$q->whereDate('date','>=',$from))
-            ->when($to, fn($q)=>$q->whereDate('date','<=',$to))
+        $purchases = Purchase::with('details.product')
+            ->when($supplier, fn($q) => $q->where('supplier_id', $supplier->id))
+            ->when($from, fn($q) => $q->whereDate('date', '>=', $from))
+            ->when($to, fn($q) => $q->whereDate('date', '<=', $to))
             ->get();
 
         $returns = PurchaseReturn::with('items.product')
-            ->when($supplier, fn($q)=>$q->where('supplier_id',$supplier->id))
-            ->when($from, fn($q)=>$q->whereDate('return_date','>=',$from))
-            ->when($to, fn($q)=>$q->whereDate('return_date','<=',$to))
+            ->when($supplier, fn($q) => $q->where('supplier_id', $supplier->id))
+            ->when($from, fn($q) => $q->whereDate('return_date', '>=', $from))
+            ->when($to, fn($q) => $q->whereDate('return_date', '<=', $to))
             ->get();
 
-        $payments = SupplierPayment::when($supplier, fn($q)=>$q->where('supplier_id',$supplier->id))
-            ->when($from, fn($q)=>$q->whereDate('payment_date','>=',$from))
-            ->when($to, fn($q)=>$q->whereDate('payment_date','<=',$to))
+        $payments = SupplierPayment::when($supplier, fn($q) => $q->where('supplier_id', $supplier->id))
+            ->when($from, fn($q) => $q->whereDate('payment_date', '>=', $from))
+            ->when($to, fn($q) => $q->whereDate('payment_date', '<=', $to))
             ->get();
+
         /* ================= Merge Transactions ================= */
-
         $transactions = [];
 
-
         /* Purchases */
-        foreach($purchases as $p){
+        foreach ($purchases as $p) {
             $transactions[] = [
-                'type'        => 'Purchase Invoice',
+                'type' => 'Purchase Invoice',
                 'Particulars' => $p->transaction_number ?? '-',
-                'date'        => $p->date,
-                'reference'   => $p->Invoice_no,
+                'date' => $p->date,
+                'reference' => $p->Invoice_no,
                 'debit' => $p->total_amount - ($p->shipping_amount ?? 0),
-                'credit'      => 0,
-                'products'    => $p->items,
+                'credit' => 0,
+                'products' => $p->details,
             ];
         }
-
 
         /* Returns */
-        foreach($returns as $r){
+        foreach ($returns as $r) {
             $transactions[] = [
-                'type'        => 'Return Invoice',
+                'type' => 'Return Invoice',
                 'Particulars' => $r->transaction_number ?? $r->return_no ?? '-',
-                'date'        => $r->return_date,
-                'reference'   => $r->invoice_no ?? '-',
-                'debit'       => 0,
-                'credit'      => $r->total_amount,
-                'products'    => $r->items,
+                'date' => $r->return_date,
+                'reference' => $r->invoice_no ?? '-',
+                'debit' => 0,
+                'credit' => $r->total_amount,
+                'products' => $r->items,
             ];
         }
 
-
         /* Payments */
-        foreach($payments as $pay){
-            $paymentParticular =
-                $pay->transaction_number
-            ?? $pay->cheque_number
-            ?? $pay->ref_no
-            ?? '-';
+        foreach ($payments as $pay) {
+            $paymentParticular = $pay->transaction_number
+                ?? $pay->cheque_number
+                ?? $pay->ref_no
+                ?? '-';
 
             $transactions[] = [
-                'type'        => 'Payment',
+                'type' => 'Payment',
                 'Particulars' => $paymentParticular,
-                'date'        => $pay->payment_date,
-                'reference'   => $pay->ref_no ?? '-',
-                'debit'       => 0,
-                'credit'      => $pay->amount,
-                'products'    => [],
+                'date' => $pay->payment_date,
+                'reference' => $pay->ref_no ?? '-',
+                'debit' => 0,
+                'credit' => $pay->amount,
+                'products' => [],
             ];
         }
 
         /* ================= Sort ================= */
-
         $transactions = collect($transactions)
             ->sortBy('date')
             ->values()
             ->toArray();
 
-
         /* ================= Running Balance ================= */
-
         $runningBalance = $openingBalance;
 
-        foreach($transactions as &$tx){
+        foreach ($transactions as &$tx) {
             // Credit - Debit
             $runningBalance += ($tx['credit'] - $tx['debit']);
             $tx['running_balance'] = $runningBalance;
         }
 
         $closingBalance = $runningBalance;
-        /* ================= PDF ================= */
+
+        /* ================= mPDF ================= */
         $currentDate = Carbon::now()->format('Ymd');
-        $fileName = 'Supplier_Of_' . $supplier->id . '_' .$supplier->supplier_name. '_' . $currentDate . '_' . 'ledger.pdf';
-        $logo = base64_encode(file_get_contents(public_path('images/logo.png')));
-        $pdf = Pdf::loadView('purchase.chronological_report', [
-            'supplier'       => $supplier,
-            'transactions'   => $transactions,
+        $fileName = 'Supplier_Of_' . ($supplier->id ?? 'All') . '_' . ($supplier->supplier_name ?? 'All') . '_' . $currentDate . '_ledger.pdf';
+        
+        $logo = '';
+        if (file_exists(public_path('images/logo.png'))) {
+            $logo = base64_encode(file_get_contents(public_path('images/logo.png')));
+        }
+
+        $html = view('purchase.chronological_report', [
+            'supplier' => $supplier,
+            'transactions' => $transactions,
             'openingBalance' => $openingBalance,
             'closingBalance' => $closingBalance,
-            'from_date'      => $from,
-            'to_date'        => $to,
-            'logo'           => $logo,   // 👈 এখানে পাঠাতে হবে
-        ])
-        ->setPaper('a4', 'portrait')
-        ->setOptions([
-            'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled'      => true,
-            'isPhpEnabled'         => true,
-        ]);
+            'from_date' => $from,
+            'to_date' => $to,
+            'logo' => $logo,
+        ])->render();
 
-        return $pdf->download($fileName);
+        $mpdf = $this->createMpdf();
+        $mpdf->WriteHTML($html);
+
+        return $mpdf->Output($fileName, 'I'); // I = Browser এ দেখাবে, D = Download
     }
+
+    
 }

@@ -18,7 +18,7 @@ return new class extends Migration
         $table->string('model_name')->nullable();
         $table->foreignId('category_id')->constrained('categories')->cascadeOnDelete();
         $table->decimal('purchase_price', 10, 4);
-        $table->decimal('salling_price', 10, 4);
+        $table->decimal('selling_price', 10, 4);
         $table->longText('description')->nullable();
         $table->string('status')->default('active');
         $table->decimal('stock', 10, 2)->default(0);

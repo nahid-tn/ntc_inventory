@@ -1,12 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="bn">
 <head>
-    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>Profit Loss Report</title>
 
     <style>
+        @font-face {
+            font-family: 'SolaimanLipi';
+            src: url('{{ public_path('fonts/SolaimanLipi.ttf') }}') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        * {
+            font-family: 'SolaimanLipi', DejaVu Sans, sans-serif !important;
+        }
+
         body {
-            font-family: SolaimanLipi;
+            font-family: 'SolaimanLipi', DejaVu Sans, sans-serif;
             font-size: 12px;
             color: #333;
         }
@@ -43,7 +54,7 @@
 
 <body>
 
-<h3>Profit & Loss Report</h3>
+<h3>লাভ-ক্ষতি রিপোর্ট</h3>
 
 <p>
 {{ $startDate->format('d M, Y') }} - {{ $endDate->format('d M, Y') }}
@@ -76,108 +87,112 @@
 
 {{-- ================= SUMMARY ================= --}}
 <div class="summary-box">
-    Total Sale: {{ number_format($grandTotalSale,2) }} |
-    Total Cost: {{ number_format($grandTotalCost,2) }} |
-    Total Expense: {{ number_format($totalExpense,2) }} |
-    Gross Profit: {{ number_format($grossProfit,2) }} |
-    Net Profit: 
+    মোট বিক্রয়: {{ number_format($grandTotalSale,2) }} |
+    মোট খরচ: {{ number_format($grandTotalCost,2) }} |
+    মোট ব্যয়: {{ number_format($totalExpense,2) }} |
+    মোট লাভ: {{ number_format($grossProfit,2) }} |
+    নিট লাভ: 
     <b style="color: {{ $netProfitFinal >= 0 ? 'green' : 'red' }}">
         {{ number_format($netProfitFinal,2) }}
     </b>
 </div>
 
 {{-- ================= NEW PRODUCTS ================= --}}
-<h4>New Products</h4>
+<h4>নতুন পণ্য</h4>
 <table>
-    <tr>
-        <th>Name</th>
-        <th>Qty</th>
-        <th>Cost</th>
-        <th>Sale</th>
-        <th>Profit</th>
-    </tr>
+    <thead>
+        <tr>
+            <th>নাম</th>
+            <th>পরিমাণ</th>
+            <th>ক্রয়মূল্য</th>
+            <th>বিক্রয়মূল্য</th>
+            <th>লাভ</th>
+        </tr>
+    </thead>
+    <tbody>
+        @forelse($newProducts as $p)
+        <tr>
+            <td>{{ $p->product_name }}</td>
+            <td>{{ $p->total_qty }}</td>
+            <td>{{ number_format($p->total_cost,2) }}</td>
+            <td>{{ number_format($p->total_sale,2) }}</td>
+            <td style="color: {{ ($p->total_sale - $p->total_cost) >= 0 ? 'green' : 'red' }}">
+                {{ number_format($p->total_sale - $p->total_cost,2) }}
+            </td>
+        </tr>
+        @empty
+        <tr><td colspan="5">কোনো তথ্য নেই</td></tr>
+        @endforelse
 
-    @forelse($newProducts as $p)
-    <tr>
-        <td>{{ $p->product_name }}</td>
-        <td>{{ $p->total_qty }}</td>
-        <td>{{ number_format($p->total_cost,2) }}</td>
-        <td>{{ number_format($p->total_sale,2) }}</td>
-        <td style="color: {{ ($p->total_sale - $p->total_cost) >= 0 ? 'green' : 'red' }}">
-            {{ number_format($p->total_sale - $p->total_cost,2) }}
-        </td>
-    </tr>
-    @empty
-    <tr><td colspan="5">No Data</td></tr>
-    @endforelse
-
-    {{-- TOTAL --}}
-    <tr class="total-row">
-        <td>Total</td>
-        <td>{{ $newTotalQty }}</td>
-        <td>{{ number_format($newTotalCost,2) }}</td>
-        <td>{{ number_format($newTotalSale,2) }}</td>
-        <td>{{ number_format($newTotalSale - $newTotalCost,2) }}</td>
-    </tr>
+        <tr class="total-row">
+            <td>মোট</td>
+            <td>{{ $newTotalQty }}</td>
+            <td>{{ number_format($newTotalCost,2) }}</td>
+            <td>{{ number_format($newTotalSale,2) }}</td>
+            <td>{{ number_format($newTotalSale - $newTotalCost,2) }}</td>
+        </tr>
+    </tbody>
 </table>
 
 {{-- ================= OLD PRODUCTS ================= --}}
-<h4>Old Products</h4>
+<h4>পুরাতন পণ্য</h4>
 <table>
-    <tr>
-        <th>Name</th>
-        <th>Qty</th>
-        <th>Cost</th>
-        <th>Sale</th>
-        <th>Profit</th>
-    </tr>
+    <thead>
+        <tr>
+            <th>নাম</th>
+            <th>পরিমাণ</th>
+            <th>ক্রয়মূল্য</th>
+            <th>বিক্রয়মূল্য</th>
+            <th>লাভ</th>
+        </tr>
+    </thead>
+    <tbody>
+        @forelse($oldProducts as $p)
+        <tr>
+            <td>{{ $p->product_name }}</td>
+            <td>{{ $p->total_qty }}</td>
+            <td>{{ number_format($p->total_cost,2) }}</td>
+            <td>{{ number_format($p->total_sale,2) }}</td>
+            <td style="color: {{ ($p->total_sale - $p->total_cost) >= 0 ? 'green' : 'red' }}">
+                {{ number_format($p->total_sale - $p->total_cost,2) }}
+            </td>
+        </tr>
+        @empty
+        <tr><td colspan="5">কোনো তথ্য নেই</td></tr>
+        @endforelse
 
-    @forelse($oldProducts as $p)
-    <tr>
-        <td>{{ $p->product_name }}</td>
-        <td>{{ $p->total_qty }}</td>
-        <td>{{ number_format($p->total_cost,2) }}</td>
-        <td>{{ number_format($p->total_sale,2) }}</td>
-        <td style="color: {{ ($p->total_sale - $p->total_cost) >= 0 ? 'green' : 'red' }}">
-            {{ number_format($p->total_sale - $p->total_cost,2) }}
-        </td>
-    </tr>
-    @empty
-    <tr><td colspan="5">No Data</td></tr>
-    @endforelse
-
-    {{-- TOTAL --}}
-    <tr class="total-row">
-        <td>Total</td>
-        <td>{{ $oldTotalQty }}</td>
-        <td>{{ number_format($oldTotalCost,2) }}</td>
-        <td>{{ number_format($oldTotalSale,2) }}</td>
-        <td>{{ number_format($oldTotalSale - $oldTotalCost,2) }}</td>
-    </tr>
+        <tr class="total-row">
+            <td>মোট</td>
+            <td>{{ $oldTotalQty }}</td>
+            <td>{{ number_format($oldTotalCost,2) }}</td>
+            <td>{{ number_format($oldTotalSale,2) }}</td>
+            <td>{{ number_format($oldTotalSale - $oldTotalCost,2) }}</td>
+        </tr>
+    </tbody>
 </table>
 
 {{-- ================= EXPENSE ================= --}}
-<h4>Expense</h4>
+<h4>ব্যয়</h4>
 <table>
     <tr>
-        <td>Expense</td>
+        <td>অন্যান্য খরচ</td>
         <td>{{ number_format($expenses,2) }}</td>
     </tr>
     <tr>
-        <td>Transport</td>
+        <td>পরিবহন</td>
         <td>{{ number_format($transport,2) }}</td>
     </tr>
     <tr class="total-row">
-        <td>Total Expense</td>
+        <td>মোট ব্যয়</td>
         <td>{{ number_format($totalExpense,2) }}</td>
     </tr>
 </table>
 
 {{-- ================= FINAL RESULT ================= --}}
 <h3>
-Net Profit / Loss:
+নিট লাভ/ক্ষতি:
 <span style="color: {{ $netProfitFinal >= 0 ? 'green' : 'red' }}">
-    {{ number_format($netProfitFinal,2) }}
+    {{ number_format($netProfitFinal,2) }} টাকা
 </span>
 </h3>
 

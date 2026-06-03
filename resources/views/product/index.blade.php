@@ -34,19 +34,22 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($products as $index => $product)
+                            @foreach ($products as $product)
                             <tr>
-                                <th scope="row">{{ $index + 1 }}</th>
+                                <th scope="row">{{ $products->firstItem() + $loop->index }}</th> <!-- পেজিনেশন SL ফিক্স -->
                                 <td>{{$product->product_name}}</td>
                                 <td class="text-right">{{ number_format($product->purchase_price ?? 0, 2) }}</td>
-                                <td class="text-right">{{ number_format($product->salling_price ?? 0, 2) }}</td>
+                                <td class="text-right">{{ number_format($product->selling_price ?? 0, 2) }}</td> <!-- টাইপো ফিক্স -->
                                 <td class="text-center">{{ number_format($product->stock ?? 0, 0) }}</td>
                                 <td class="text-center">   
-                                <a href="{{route('product.edit',$product->id)}}" class="btn btn-primary">Edit</a>
-                                <a href="{{route('product.delete',$product->id)}}" class="btn btn-danger" onclick="return confirm('Are Your sure?')">Delete</a>
+                                    <a href="{{route('product.edit',$product)}}" class="btn btn-primary">Edit</a>
+                                    <form action="{{route('product.destroy',$product)}}" method="POST" class="d-inline">
+                                        @csrf @method('DELETE')
+                                        <button class="btn btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
+                                    </form>
                                 </td>
                             </tr>
-                         @endforeach
+                            @endforeach
                         </tbody>
                     </table>
                     <div class="mt-4">

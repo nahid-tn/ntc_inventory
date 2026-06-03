@@ -71,7 +71,7 @@
 
                     {{-- Sale Info --}}
                     <p><strong>Invoice No:</strong> {{ $sale->invoice_no }}</p>
-                    <p><strong>Date:</strong> {{ $sale->sale_date->format('d-m-Y') }}</p>
+                    <p><strong>Date:</strong> {{ \Carbon\Carbon::parse($sale->sale_date)->format('d-m-Y') }}</p>
                     <p><strong>Customer:</strong> {{ $sale->customer->customer_name ?? '' }}, <strong>Address:</strong> {{ $sale->customer->address ?? '' }}</p>
                     <p><strong>Mobile:</strong> {{ $sale->customer->mobile ?? '' }}</p>
 

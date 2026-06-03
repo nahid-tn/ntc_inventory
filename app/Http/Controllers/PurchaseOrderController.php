@@ -11,7 +11,9 @@ use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Barryvdh\DomPDF\Facade\Pdf;
+// use Barryvdh\DomPDF\Facade\Pdf;
+use Mpdf\Mpdf;
+use Mpdf\Output\Destination;
 
 class PurchaseOrderController extends Controller
 {

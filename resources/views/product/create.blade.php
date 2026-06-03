@@ -55,9 +55,9 @@
                                 <small id="purchase-price-warning" class="text-danger" style="display:none"></small>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="salling_price">Salling Price</label>
-                                <input type="text" id="salling_price" name="salling_price" class="form-control" placeholder="Enter salling price..." autocomplete="off">
-                                <small id="salling-price-warning" class="text-danger" style="display:none"></small>
+                                <label for="selling_price">Selling Price</label>
+                                <input type="text" id="selling_price" name="selling_price" class="form-control" placeholder="Enter selling price..." autocomplete="off">
+                                <small id="selling-price-warning" class="text-danger" style="display:none"></small>
                             </div>
                         </div>
                         <!-- Product Description -->

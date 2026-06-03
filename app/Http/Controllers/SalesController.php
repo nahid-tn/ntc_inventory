@@ -8,18 +8,26 @@ use App\Models\SaleDetail;
 use App\Models\Product;
 use App\Models\Customer;
 use Illuminate\Support\Facades\DB;
-use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\OldProduct;
 use App\Models\OldProductPurchase;
 use App\Models\OldProductPurchaseDetail;
 use App\Models\SalesReceived;
 use Carbon\Carbon;
 use App\Models\Unit;
+use Mpdf\Mpdf;
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
+
 class SalesController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Sales::with(['customer', 'details.product', 'oldProductPurchases.details.oldProduct']);
+        $query = Sales::with([
+            'customer', 
+            'details.product', 
+            'oldProductPurchases.details.oldProduct',
+            'receivedPayments'  // ✅ যোগ করা হয়েছে
+        ]);
 
         // Invoice Search
         if ($request->invoice) {
@@ -34,7 +42,6 @@ class SalesController extends Controller
             });
         }
         
-
         // Date Range Search
         if ($request->from_date && $request->to_date) {
             $query->whereBetween('sale_date', [
@@ -68,196 +75,170 @@ class SalesController extends Controller
     }
     
     public function store(Request $request)
-{ 
-    
-    $request->validate([
-        'invoice_no'     => 'nullable|string|unique:sales,invoice_no',
-        'sale_date'      => 'required|date',
-        'customer_id'    => 'required|exists:customers,id',
-        // 'payment_method' => 'required',
-    ]);
-
-    DB::transaction(function () use ($request) {
-
-        /* ================= Invoice Number ================= */
-        $invoiceNo = $request->invoice_no;
-
-        if (empty($invoiceNo)) {
-
-            $lastInvoice = Sales::latest()->first();
-
-            $invoiceNo = $lastInvoice
-                ? 'INV-' . str_pad($lastInvoice->id + 1, 6, '0', STR_PAD_LEFT)
-                : 'INV-000001';
-        }
-
-        /* ================= New Products ================= */
-        $products = $request->products ?? [];
-        $subtotal = 0;
-
-        foreach ($products as $p) {
-
-            if (empty($p['product_id'])) continue;
-
-            $subtotal += ($p['qty'] * $p['price']);
-        }
-
-        /* ================= Old Products ================= */
-        $oldProducts = $request->old_products ?? [];
-        $oldTotal = 0;
-
-        foreach ($oldProducts as $op) {
-
-            if (empty($op['product_name'])) continue;
-
-            $oldTotal += ($op['qty'] * $op['price']);
-        }
-
-        /* ================= Calculation ================= */
-
-        $taxPercent = $request->tax_percentage ?? 0;
-        $taxAmount  = ($subtotal * $taxPercent) / 100;
-
-        $shipping   = $request->shipping_amount ?? 0;
-        $discount   = $request->discount_amount ?? 0;
-
-        $grandTotal = $subtotal + $taxAmount + $shipping - $oldTotal - $discount;
-        $grandTotal = max($grandTotal, 0);
-
-        /* ================= Create Sale ================= */
-
-        $sale = Sales::create([
-            'invoice_no'      => $invoiceNo,
-            'sale_date'       => $request->sale_date,
-            'customer_id'     => $request->customer_id,
-            'subtotal'        => $subtotal,
-            'tax_percentage'  => $taxPercent,
-            'tax_amount'      => $taxAmount,
-            'shipping_amount' => $shipping,
-            'discount_amount' => $discount,
-            'total_amount'    => $grandTotal,
-            'due_amount'      => $grandTotal,
-            'ref_no'          => $request->ref_no,
-            'body_date'       => $request->body_date,
+    { 
+        $request->validate([
+            'invoice_no'     => 'nullable|string|unique:sales,invoice_no',
+            'sale_date'      => 'required|date',
+            'customer_id'    => 'required|exists:customers,id',
+            // 'payment_method' => 'required',
         ]);
 
-        /* ================= Store New Products ================= */
+        DB::transaction(function () use ($request) {
 
-        foreach ($products as $p) {
+            /* ================= Invoice Number ================= */
+            $invoiceNo = $request->invoice_no;
 
-            if (empty($p['product_id'])) continue;
-
-            SaleDetail::create([
-                'sale_id'    => $sale->id,
-                'product_id' => $p['product_id'],
-                'qty'        => $p['qty'],
-                'unit'       => $p['unit'],
-                'price'      => $p['price'],
-                'total'      => $p['qty'] * $p['price'],
-                'narration'  => $p['narration'] ?? null
-            ]);
-
-            /* ===== Reduce Stock ===== */
-
-            $product = Product::find($p['product_id']);
-
-            if ($product) {
-
-                $product->stock -= $p['qty'];
-                $product->save();
+            if (empty($invoiceNo)) {
+                $lastInvoice = Sales::latest()->first();
+                $invoiceNo = $lastInvoice
+                    ? 'INV-' . str_pad($lastInvoice->id + 1, 6, '0', STR_PAD_LEFT)
+                    : 'INV-000001';
             }
-        }
 
-        /* ================= Store Old Products ================= */
+            /* ================= New Products ================= */
+            $products = $request->products ?? [];
+            $subtotal = 0;
 
-        if (!empty($oldProducts)) {
+            foreach ($products as $p) {
+                if (empty($p['product_id'])) continue;
+                $subtotal += ($p['qty'] * $p['price']);
+            }
 
-            $lastId = OldProductPurchase::max('id') ?? 0;
-
-            $purchaseNo = 'OP-' . date('Ymd') . '-' . str_pad($lastId + 1, 4, '0', STR_PAD_LEFT);
-
-            $purchase = OldProductPurchase::create([
-                'purchase_no'   => $purchaseNo,
-                'sale_id'       => $sale->id,
-                'total'         => $oldTotal,
-                'purchase_date' => $request->sale_date,
-            ]);
+            /* ================= Old Products ================= */
+            $oldProducts = $request->old_products ?? [];
+            $oldTotal = 0;
 
             foreach ($oldProducts as $op) {
-
                 if (empty($op['product_name'])) continue;
+                $oldTotal += ($op['qty'] * $op['price']);
+            }
 
-                $oldProduct = OldProduct::firstOrNew([
-                    'product_name' => $op['product_name']
+            /* ================= Calculation ================= */
+            $taxPercent = $request->tax_percentage ?? 0;
+            $taxAmount  = ($subtotal * $taxPercent) / 100;
+            $shipping   = $request->shipping_amount ?? 0;
+            $discount   = $request->discount_amount ?? 0;
+            $grandTotal = $subtotal + $taxAmount + $shipping - $oldTotal - $discount;
+            $grandTotal = max($grandTotal, 0);
+
+            /* ================= Create Sale ================= */
+            $sale = Sales::create([
+                'invoice_no'      => $invoiceNo,
+                'sale_date'       => $request->sale_date,
+                'customer_id'     => $request->customer_id,
+                'subtotal'        => $subtotal,
+                'tax_percentage'  => $taxPercent,
+                'tax_amount'      => $taxAmount,
+                'shipping_amount' => $shipping,
+                'discount_amount' => $discount,
+                'total_amount'    => $grandTotal,
+                'due_amount'      => $grandTotal,
+                'ref_no'          => $request->ref_no,
+                'body_date'       => $request->body_date,
+            ]);
+
+            /* ================= Store New Products ================= */
+            foreach ($products as $p) {
+                if (empty($p['product_id'])) continue;
+
+                SaleDetail::create([
+                    'sale_id'    => $sale->id,
+                    'product_id' => $p['product_id'],
+                    'qty'        => $p['qty'],
+                    'unit'       => $p['unit'],
+                    'price'      => $p['price'],
+                    'total'      => $p['qty'] * $p['price'],
+                    'narration'  => $p['narration'] ?? null
                 ]);
 
-                $oldProduct->qty += $op['qty'] ?? 0;
-                $oldProduct->unit = $op['unit'] ?? null;
-                $oldProduct->price = $op['price'] ?? 0;
-                $oldProduct->total = $oldProduct->qty * ($op['price'] ?? 0);
-                $oldProduct->sale_id = $sale->id;
+                $product = Product::find($p['product_id']);
+                if ($product) {
+                    $product->stock -= $p['qty'];
+                    $product->save();
+                }
+            }
 
-                $oldProduct->save();
+            /* ================= Store Old Products ================= */
+            if (!empty($oldProducts)) {
+                $lastId = OldProductPurchase::max('id') ?? 0;
+                $purchaseNo = 'OP-' . date('Ymd') . '-' . str_pad($lastId + 1, 4, '0', STR_PAD_LEFT);
 
-                OldProductPurchaseDetail::create([
-                    'old_product_purchase_id' => $purchase->id,
-                    'old_product_id'          => $oldProduct->id,
-                    'qty'                     => $op['qty'] ?? 0,
-                    'unit'                    => $op['unit'] ?? null,
-                    'price'                   => $op['price'] ?? 0,
-                    'total_amount'            => ($op['qty'] ?? 0) * ($op['price'] ?? 0),
-                    'narration'               => $op['narration'] ?? null,
+                $purchase = OldProductPurchase::create([
+                    'purchase_no'   => $purchaseNo,
+                    'sale_id'       => $sale->id,
+                    'total'         => $oldTotal,
+                    'purchase_date' => $request->sale_date,
+                ]);
+
+                foreach ($oldProducts as $op) {
+                    if (empty($op['product_name'])) continue;
+
+                    $oldProduct = OldProduct::firstOrNew([
+                        'product_name' => $op['product_name']
+                    ]);
+
+                    $oldProduct->qty += $op['qty'] ?? 0;
+                    $oldProduct->unit = $op['unit'] ?? null;
+                    $oldProduct->price = $op['price'] ?? 0;
+                    $oldProduct->total = $oldProduct->qty * ($op['price'] ?? 0);
+                    $oldProduct->sale_id = $sale->id;
+                    $oldProduct->save();
+
+                    OldProductPurchaseDetail::create([
+                        'old_product_purchase_id' => $purchase->id,
+                        'old_product_id'          => $oldProduct->id,
+                        'qty'                     => $op['qty'] ?? 0,
+                        'unit'                    => $op['unit'] ?? null,
+                        'price'                   => $op['price'] ?? 0,
+                        'total_amount'            => ($op['qty'] ?? 0) * ($op['price'] ?? 0),
+                        'narration'               => $op['narration'] ?? null,
+                    ]);
+                }
+            }
+
+            /* ================= Initial Payment ================= */
+            $paid = (float) ($request->paid_amount ?? 0);
+
+            if ($paid > 0) {
+                $receivedType = ($paid >= $grandTotal)
+                    ? 'Sales Received'
+                    : 'Partial Payment';
+
+                SalesReceived::create([
+                    'sale_id'         => $sale->id,
+                    'customer_id'     => $sale->customer_id,
+                    'received_date'   => $request->sale_date,
+                    'amount'          => $paid,
+                    'received_method' => $request->payment_method,
+                    'received_type'   => $receivedType,
+                    'tracking_no'     => $request->ref_no,
+                ]);
+
+                $totalReceived = SalesReceived::where('sale_id', $sale->id)->sum('amount');
+                $sale->update([
+                    'due_amount' => $sale->total_amount - $totalReceived
                 ]);
             }
-        }
+        });
 
-        /* ================= Initial Payment ================= */
+        return redirect()->route('sale.index')
+            ->with('success', 'Sale Created Successfully!');
+    }
 
-        $paid = (float) ($request->paid_amount ?? 0);
-
-        if ($paid > 0) {
-
-            $receivedType = ($paid >= $grandTotal)
-                ? 'Sales Received'
-                : 'Partial Payment';
-
-            SalesReceived::create([
-                'sale_id'         => $sale->id,
-                'customer_id'     => $sale->customer_id,
-                'received_date'   => $request->sale_date,
-                'amount'          => $paid,
-                'received_method' => $request->payment_method,
-                'received_type'   => $receivedType,
-                'tracking_no'     => $request->ref_no,
-            ]);
-
-            /* ===== Update Due Amount ===== */
-
-            $totalReceived = SalesReceived::where('sale_id', $sale->id)->sum('amount');
-
-            $sale->update([
-                'due_amount' => $sale->total_amount - $totalReceived
-            ]);
-        }
-
-    });
-
-    return redirect()->route('sale.index')
-        ->with('success', 'Sale Created Successfully!');
-}
-
-    // 
     public function edit($id)
     {
         $sale = Sales::with([
             'details.product',
             'customer',
             'oldProductPurchases.details.oldProduct',
-            'receivedPayments'
+            'receivedPayments'  // ✅ already added
         ])->findOrFail($id);
+        
         $units = Unit::all();
-        // latest payment
-        $lastPayment = $sale->receivedPayments()->latest()->first();
+        
+        // ✅ Eager loading already done, so no N+1 here
+        $lastPayment = $sale->receivedPayments->last(); // Changed from latest() to avoid extra query
+        
         $old_products = OldProduct::all();
         return view('sale.edit', compact('sale','lastPayment', 'old_products', 'units'));
     }
@@ -272,9 +253,11 @@ class SalesController extends Controller
         ]);
 
         DB::transaction(function () use ($request, $id) {
-
-            $sale = Sales::with('details.product', 'oldProductPurchases.details.oldProduct')
-                        ->findOrFail($id);
+            $sale = Sales::with([
+                'details.product', 
+                'oldProductPurchases.details.oldProduct',
+                'receivedPayments'  // ✅ added for eager loading
+            ])->findOrFail($id);
 
             /* =====================================================
             STEP 1: ROLLBACK STOCK (Previous Sale)
@@ -410,8 +393,10 @@ class SalesController extends Controller
             /* =====================================================
             STEP 8: PAYMENT DIFFERENCE LOGIC
             ======================================================*/
-            $previousReceived = SalesReceived::where('sale_id', $sale->id)->sum('amount');
+            // ✅ Using eager loaded collection instead of query
+            $previousReceived = $sale->receivedPayments->sum('amount');
             $newPaid = (float) $request->paid_amount;
+            
             if ($newPaid != $previousReceived) {
                 $difference = $newPaid - $previousReceived;
                 if ($difference != 0) {
@@ -432,7 +417,8 @@ class SalesController extends Controller
             /* =====================================================
             FINAL DUE UPDATE
             ======================================================*/
-            $totalReceived = SalesReceived::where('sale_id', $sale->id)->sum('amount');
+            // ✅ Using eager loaded collection
+            $totalReceived = $sale->refresh()->receivedPayments->sum('amount');
             $sale->update(['due_amount' => $sale->total_amount - $totalReceived]);
         });
 
@@ -446,25 +432,26 @@ class SalesController extends Controller
             'customer',
             'details.product',
             'oldProductPurchases.details.oldProduct',
-            'receivedPayments'
+            'receivedPayments'  // ✅ already added
         ])->findOrFail($id);
+        
         return view('sale.view', compact('sale'));
     }
   
     // Sale Edit + Partial Payment Page
-public function editPartial($id)
-{
-    $sale = Sales::with([
-        'customer',
-        'details.product',
-        'oldProductPurchases.details.oldProduct',
-        'receivedPayments'
-    ])->findOrFail($id);
+    public function editPartial($id)
+    {
+        $sale = Sales::with([
+            'customer',
+            'details.product',
+            'oldProductPurchases.details.oldProduct',
+            'receivedPayments'  // ✅ added
+        ])->findOrFail($id);
 
-    return view('sale.edit_partial', compact('sale'));
-}
+        return view('sale.edit_partial', compact('sale'));
+    }
 
-// Partial Payment Save
+    // Partial Payment Save
     public function savePartialPayment(Request $request, $id)
     {
         $request->validate([
@@ -474,14 +461,13 @@ public function editPartial($id)
             'tracking_no'     => 'nullable|string',
         ]);
 
-        $sale = Sales::findOrFail($id);
+        $sale = Sales::with('receivedPayments')->findOrFail($id);  // ✅ added eager loading
 
         $method = $request->received_method;
         if($method === 'other'){
             $method = $request->received_method_other;
         }
 
-        // Create Partial Payment
         SalesReceived::create([
             'sale_id'         => $sale->id,
             'customer_id'     => $sale->customer_id,
@@ -492,73 +478,60 @@ public function editPartial($id)
             'received_type'   => 'Partial Payment',
         ]);
 
-        // Update total received & due
-        $totalReceived = $sale->receivedPayments()->sum('amount');
+        // ✅ Using eager loaded collection
+        $totalReceived = $sale->refresh()->receivedPayments->sum('amount');
         $sale->update(['due_amount' => $sale->total_amount - $totalReceived]);
 
         return redirect()->back()->with('success', 'Partial payment added successfully!');
     }
 
     public function updatePartialPayment(Request $request, $id)
-{
-    $payment = SalesReceived::findOrFail($id);
-    $request->validate([
-        'amount' => 'required|numeric|min:0',
-        'received_date' => 'required|date',
-        'received_method' => 'required|string',
-        'tracking_no' => 'nullable|string',
-    ]);
+    {
+        $payment = SalesReceived::with('sale')->findOrFail($id);  // ✅ eager load sale
+        
+        $request->validate([
+            'amount' => 'required|numeric|min:0',
+            'received_date' => 'required|date',
+            'received_method' => 'required|string',
+            'tracking_no' => 'nullable|string',
+        ]);
 
-    $payment->update([
-        'amount' => $request->amount,
-        'received_date' => $request->received_date,
-        'received_method' => $request->received_method,
-        'received_method_other' => $request->received_method=='other' ? $request->received_method_other : null,
-        'tracking_no' => $request->tracking_no,
-    ]);
+        $payment->update([
+            'amount' => $request->amount,
+            'received_date' => $request->received_date,
+            'received_method' => $request->received_method,
+            'received_method_other' => $request->received_method=='other' ? $request->received_method_other : null,
+            'tracking_no' => $request->tracking_no,
+        ]);
 
-    // Update due_amount in Sale
-    $sale = $payment->sale;
-    $totalReceived = $sale->receivedPayments()->sum('amount');
-    $sale->update(['due_amount' => $sale->total_amount - $totalReceived]);
+        // Update due_amount in Sale
+        $sale = $payment->sale;
+        $sale->load('receivedPayments');  // ✅ eager load before summing
+        $totalReceived = $sale->receivedPayments->sum('amount');
+        $sale->update(['due_amount' => $sale->total_amount - $totalReceived]);
 
-    return back()->with('success', 'Partial Payment updated successfully.');
-}
+        return back()->with('success', 'Partial Payment updated successfully.');
+    }
 
     public function deletePartialPayment($id)
     {
-        $payment = SalesReceived::findOrFail($id);
+        $payment = SalesReceived::with('sale')->findOrFail($id);  // ✅ eager load sale
         $sale = $payment->sale;
         $payment->delete();
 
-        // Update due_amount in Sale
-        $totalReceived = $sale->receivedPayments()->sum('amount');
+        $sale->load('receivedPayments');  // ✅ reload eager loaded relation
+        $totalReceived = $sale->receivedPayments->sum('amount');
         $sale->update(['due_amount' => $sale->total_amount - $totalReceived]);
 
         return back()->with('success', 'Partial Payment deleted successfully.');
     }
 
-    public function downloadPdf($id)
+    
+
+    public function destroy($id) 
     {
-        $sale = Sales::with([
-            'customer',
-            'details.product',
-            'oldProductPurchases.details.oldProduct'
-        ])->findOrFail($id);
-
-        $pdf = Pdf::loadView('sale.pdf', compact('sale'))
-            ->setPaper('A4','portrait')
-            ->setOption('defaultFont', 'solaimanLipi')
-            ->setOption('isHtml5ParserEnabled', true)
-            ->setOption('isRemoteEnabled', true)
-            ->setOption('isFontSubsettingEnabled', true);
-
-        return $pdf->download('Sale_Invoice_'.$sale->invoice_no.'.pdf');
-    }
-
-
-    public function destroy($id) {
-        $sale = Sales::with('details')->findOrFail($id);
+        $sale = Sales::with('details.product')->findOrFail($id);  // ✅ added eager loading
+        
         DB::transaction(function() use($sale) {
             foreach($sale->details as $item) {
                 $product = $item->product;
@@ -568,8 +541,9 @@ public function editPartial($id)
             $sale->details()->delete();
             $sale->delete();
         });
-            return redirect()->route('sale.index');
-        }
+        
+        return redirect()->route('sale.index');
+    }
 
     public function autocomplete(Request $request)
     {
@@ -578,13 +552,12 @@ public function editPartial($id)
         $customers = Customer::where('customer_name', 'LIKE', "%{$term}%")
             ->orWhere('mobile', 'LIKE', "%{$term}%")
             ->orWhere('address', 'LIKE', "%{$term}%")
-            ->get(['id', 'customer_name', 'mobile', 'address']); // এখানে 'customer_name' ঠিক আছে
+            ->get(['id', 'customer_name', 'mobile', 'address']);
 
-        // JSON structure ঠিক করা
         $result = $customers->map(function($c) {
             return [
                 'id' => $c->id,
-                'name' => $c->customer_name, // <-- এখানে name set করতে হবে
+                'name' => $c->customer_name,
                 'mobile' => $c->mobile,
                 'address' => $c->address,
             ];
@@ -596,29 +569,25 @@ public function editPartial($id)
     public function saleAutocomplete(Request $request)
     {
         $term = $request->term;
-        $sales = Sale::with('customer')
+        
+        $sales = Sales::with('customer')  // ✅ already has eager loading
             ->where(function ($query) use ($term) {
                 $query->whereRaw("CAST(invoice_no AS CHAR) LIKE ?", ["%{$term}%"])
                     ->orWhereHas('customer', function ($q) use ($term) {
                         $q->where('customer_name', 'LIKE', "%{$term}%");
                     });
-
             })
-
             ->limit(10)
             ->get();
+            
         return response()->json($sales->map(function ($sale) {
             return [
                 'id' => $sale->id,
                 'invoice_no' => $sale->invoice_no,
                 'sale_date' => $sale->sale_date,
                 'customer_name' => $sale->customer->customer_name ?? '',
-                'label' =>
-                    "Invoice: {$sale->invoice_no} | Date: {$sale->sale_date} | Customer: " .
-                    ($sale->customer->customer_name ?? ''),
-                'value' =>
-                    $sale->invoice_no . ' - ' .
-                    ($sale->customer->customer_name ?? ''),
+                'label' => "Invoice: {$sale->invoice_no} | Date: {$sale->sale_date} | Customer: " . ($sale->customer->customer_name ?? ''),
+                'value' => $sale->invoice_no . ' - ' . ($sale->customer->customer_name ?? ''),
             ];
         }));
     }
@@ -633,12 +602,10 @@ public function editPartial($id)
         ]);
 
         DB::transaction(function () use ($request, $id) {
+            $sale = Sales::with('receivedPayments')->findOrFail($id);  // ✅ added eager loading
 
-            $sale = Sales::findOrFail($id);
-
-           $totalReceived = SalesReceived::where('sale_id', $sale->id)->sum('amount');
+            $totalReceived = $sale->receivedPayments->sum('amount');  // ✅ using collection instead of query
             $due = $sale->total_amount - $totalReceived;
-
             $amount = (float)$request->amount;
 
             if ($amount == 0) {
@@ -655,9 +622,7 @@ public function editPartial($id)
                 'tracking_no'     => $request->tracking_no,
             ]);
 
-            // 🔁 recalc due
-            $newTotalReceived = SalesReceived::where('sale_id', $sale->id)->sum('amount');
-
+            $newTotalReceived = $sale->refresh()->receivedPayments->sum('amount');
             $sale->update([
                 'due_amount' => $sale->total_amount - $newTotalReceived,
             ]);
@@ -666,4 +631,110 @@ public function editPartial($id)
         return redirect()->route('sale.index')
             ->with('success', 'Payment received successfully.');
     }
+
+    public function downloadPdf($id)
+    {
+        $sale = Sales::with([
+            'customer',
+            'details.product',
+            'receivedPayments',
+            'oldProductPurchases.details.oldProduct',
+        ])->findOrFail($id);
+
+        $html = view('sale.pdf', [
+            'sale' => $sale
+        ])->render();
+
+        $mpdf = new \Mpdf\Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'default_font' => 'solaimanlipi',
+            'margin_left' => 10,
+            'margin_right' => 10,
+            'margin_top' => 10,
+            'margin_bottom' => 10,
+            'autoPageBreak' => true,
+        ]);
+
+        $mpdf->WriteHTML($html);
+
+        return $mpdf->Output('sale_'.$sale->invoice_no.'.pdf', 'D');
+    }
+
+    public function partialPaymentPdf($id)
+{
+    $sale = Sales::with([
+        'customer',
+        'details.product',
+        'oldProductPurchases.details.oldProduct',
+        'receivedPayments'
+    ])->findOrFail($id);
+
+    $companyInfo = DB::table('company_info')->first();
+
+    //discount calculation
+    // ✅ Discount (DB থেকে)
+    $discount = $sale->discount ?? 0;
+
+    // ✅ Received Payment
+    $receivedTotal = $sale->receivedPayments->sum('amount');
+
+    // ✅ Net Total
+    $netTotal = $sale->total_amount - $discount;
+
+    // ✅ Total Paid
+    $totalPaid = $sale->paid_amount + $receivedTotal;
+
+    // ✅ Due
+    $dueAmount = $netTotal - $totalPaid;
+
+
+    $html = view(
+        'sale.partial_payment_pdf',
+        compact('sale', 'companyInfo', 'discount', 'receivedTotal', 'netTotal', 'totalPaid', 'dueAmount')
+    )->render();
+
+    // ✅ SINGLE PROPER MPDF INSTANCE (FIXED)
+    $mpdf = new \Mpdf\Mpdf([
+        'mode' => 'utf-8',
+        'format' => 'A4',
+
+        // ⭐ IMPORTANT FOR BANGLA
+        'autoScriptToLang' => true,
+        'autoLangToFont' => true,
+
+        'fontDir' => array_merge(
+            (new \Mpdf\Config\ConfigVariables())->getDefaults()['fontDir'],
+            [public_path('fonts')]
+        ),
+
+        'fontdata' => (new \Mpdf\Config\FontVariables())->getDefaults()['fontdata'] + [
+            'solaimanlipi' => [
+                'R' => 'SolaimanLipi.ttf',
+            ]
+        ],
+
+        // ⭐ MUST MATCH fontdata key
+        'default_font' => 'solaimanlipi',
+
+        'margin_top' => 10,
+        'margin_bottom' => 10,
+        'margin_left' => 10,
+        'margin_right' => 10,
+    ]);
+
+    $mpdf->WriteHTML($html);
+
+    return response(
+        $mpdf->Output(
+            'Partial_Payment_'.$sale->invoice_no.'.pdf',
+            'S'
+        ),
+        200,
+        [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="Partial_Payment.pdf"',
+        ]
+    );
+}
 }

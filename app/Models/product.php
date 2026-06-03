@@ -3,8 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
-class product extends Model
+class Product extends Model
 {
     protected $fillable = [
         'product_name',
@@ -13,42 +17,45 @@ class product extends Model
         'brand_id',
         'category_id',
         'purchase_price',
-        'salling_price',
+        'selling_price', // টাইপো ফিক্স
         'description',
         'status',
         'stock',
     ];
 
-    public function brand()
+    // Laravel 12: টাইপ কাস্টিং - এটা ম্যান্ডেটরি
+    protected $casts = [
+        'purchase_price' => 'decimal:2',
+        'selling_price' => 'decimal:2',
+        'stock' => 'integer',
+        'status' => 'boolean',
+    ];
+
+    public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);
     }
-    public function category()
+
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
-    public function getProductNameBnAttribute()
-    {
-        return $this->enToBn($this->product_name);
-    }
-        private function enToBn($text)
-    {
-        $map = [
-            'a'=>'আ','b'=>'ব','c'=>'ক','d'=>'দ','e'=>'এ','f'=>'ফ','g'=>'গ',
-            'h'=>'হ','i'=>'ই','j'=>'জ','k'=>'ক','l'=>'ল','m'=>'ম','n'=>'ন',
-            'o'=>'ও','p'=>'প','q'=>'ক','r'=>'র','s'=>'স','t'=>'ত','u'=>'উ',
-            'v'=>'ভ','w'=>'ও','x'=>'ক্স','y'=>'য়','z'=>'জ'
-        ];
 
-        return strtr(strtolower($text ?? ''), $map);
-    }
-    public function lastPurchaseDetail()
+    public function lastPurchaseDetail(): HasOne
     {
-        // Latest purchase detail per product
         return $this->hasOne(PurchaseDetail::class)->latestOfMany();
     }
-    public function purchaseOrderDetails()
+
+    public function purchaseOrderDetails(): HasMany
     {
         return $this->hasMany(PurchaseOrderDetail::class);
+    }
+
+    // Laravel 12: নতুন Attribute syntax - accessor লেখার বেস্ট উপায়
+    protected function productNameBn(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => app(BanglaHelper::class)->translate($this->product_name)
+        );
     }
 }

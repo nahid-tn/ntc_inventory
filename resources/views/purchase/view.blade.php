@@ -51,54 +51,45 @@ $dueAmount = $purchase->total_amount - $fullAmount;
 <h4>Payment History</h4>
 
 <table class="table table-bordered">
-<thead>
-<tr>
-<th>#</th>
-<th>Payment Date</th>
-<th>Amount</th>
-<th>Method</th>
-<th>Note</th>
-</tr>
-</thead>
-
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Payment Date</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Note</th>
+        </tr>
+    </thead>
 <tbody>
 
 @foreach($purchase->payments as $index => $payment)
 
 <tr>
-
-<td>{{ $index + 1 }}</td>
-
-<td>{{ \Carbon\Carbon::parse($payment->payment_date)->format('d-m-Y') }}</td>
-
-<td>{{ number_format($payment->amount,2) }}</td>
-
-<td>{{ ucfirst($payment->payment_method) }}</td>
-
-<td>{{ $payment->note }}</td>
-
+    <td>{{ $index + 1 }}</td>
+    <td>{{ \Carbon\Carbon::parse($payment->payment_date)->format('d-m-Y') }}</td>
+    <td>{{ number_format($payment->amount,2) }}</td>
+    <td>{{ ucfirst($payment->payment_method) }}</td>
+    <td>{{ $payment->note }}</td>
 </tr>
-
 @endforeach
-
 </tbody>
 </table>
-
 @endif
 
 <hr class="my-4">
-
 <h4>Products:</h4>
-
 <table class="table table-bordered">
-
 <thead>
 <tr>
-<th>Product Name</th>
-<th>Qty</th>
-<th>Unit</th>
-<th>Unit Price</th>
-<th>Total</th>
+    <th style="text-align:center; width: 3%; ">#</th>
+    <th style="text-align:center; width: 30%; ">Product Name</th>
+    @if($purchase->details->firstWhere('barcode_image', '!=', null))
+    <th style="text-align: center; width: 20%;">Barcode</th>
+    @endif
+    <th style="text-align:center; width: 10%; ">Qty</th>
+    <th style="text-align:center; width: 10%;">Unit</th>
+    <th style="text-align:center; width: 15%;">Unit Price</th>
+    <th style="text-align:center; width: 15%;">Total</th>
 </tr>
 </thead>
 
@@ -107,48 +98,31 @@ $dueAmount = $purchase->total_amount - $fullAmount;
 @foreach($purchase->details as $item)
 
 <tr>
-
-<td>{{ $item->product->product_name }}</td>
-
-<td>{{ $item->qty }}</td>
-
-<td>{{ $item->unit }}</td>
-
-<td>{{ number_format($item->price,2) }}</td>
-
-<td>{{ number_format($item->total,2) }}</td>
-
+    <td>{{ $loop->iteration }}</td>
+    <td>{{ $item->product->product_name }}</td>
+    @if($item->barcode_image)
+    <td style="text-align:center"> <img src="data:image/png;base64,{{ $item->barcode_image }}" style="height:40px; width:100%;"></td>
+    @endif
+    <td>{{ $item->qty }}</td>
+    <td>{{ $item->unit }}</td>
+    <td>{{ number_format($item->price,2) }}</td>
+    <td>{{ number_format($item->total,2) }}</td>
 </tr>
-
 @endforeach
-
 </tbody>
 </table>
-
-
-<hr class="my-4">
-
-<h5>Subtotal: {{ number_format($purchase->subtotal,2) }}</h5>
-
-<h5>Tax ({{ $purchase->tax_percentage ?? 0 }}%): 
-{{ number_format($purchase->tax_amount,2) }}
-</h5>
-
-<h5>Shipping: {{ number_format($purchase->shipping_amount,2) }}</h5>
-
-<h5>Total Amount: {{ number_format($purchase->total_amount,2) }}</h5>
-
-<h5>Paid Amount: {{ number_format($fullAmount,2) }}</h5>
-
-<h5>Due Amount: {{ number_format($dueAmount,2) }}</h5>
-
-<hr class="my-4">
-
-<button type="button" class="btn btn-secondary" onclick="history.back()">
-← Back
-</button>
-
-</div>
+        <hr class="my-4">
+        <h5>Subtotal: {{ number_format($purchase->subtotal,2) }}</h5>
+        <h5>Tax ({{ $purchase->tax_percentage ?? 0 }}%): 
+        {{ number_format($purchase->tax_amount,2) }}
+        </h5>
+        <h5>Shipping: {{ number_format($purchase->shipping_amount,2) }}</h5>
+        <h5>Total Amount: {{ number_format($purchase->total_amount,2) }}</h5>
+        <h5>Paid Amount: {{ number_format($fullAmount,2) }}</h5>
+        <h5>Due Amount: {{ number_format($dueAmount,2) }}</h5>
+        <hr class="my-4">
+        <button type="button" class="btn btn-secondary" onclick="history.back()"> ← Back </button>
+    </div>
 </div>
 
 <br>

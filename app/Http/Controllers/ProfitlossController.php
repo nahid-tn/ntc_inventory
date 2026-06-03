@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-use PDF;
+use Mpdf\Mpdf;
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
 
 class ProfitlossController extends Controller
 {
@@ -13,9 +15,9 @@ class ProfitlossController extends Controller
     {
         $reports = DB::table('products as p')
             /*
-            =========================
+
             Purchase (Minus Return)
-            =========================
+
             */
             ->leftJoin(DB::raw('(
                 SELECT 
@@ -29,9 +31,9 @@ class ProfitlossController extends Controller
             ) as purchase_data'), 'p.id', '=', 'purchase_data.product_id')
 
             /*
-            =========================
+
             Sale
-            =========================
+
             */
             ->leftJoin(DB::raw('(
                 SELECT 
@@ -45,24 +47,20 @@ class ProfitlossController extends Controller
             ->select(
                 'p.id',
                 'p.product_name',
-
                 DB::raw('COALESCE(purchase_data.total_qty,0) as purchase_qty'),
                 DB::raw('COALESCE(purchase_data.total_amount,0) as purchase_amount'),
-
                 DB::raw('COALESCE(sd.total_qty,0) as sale_qty'),
                 DB::raw('COALESCE(sd.total_amount,0) as sale_amount'),
-
                 DB::raw('COALESCE(sd.total_amount,0) - COALESCE(purchase_data.total_amount,0) as profit_loss')
             )
             ->orderBy('p.product_name')
             ->get();
 
         /*
-        =========================
-        Overall Summary
-        =========================
-        */
 
+        Overall Summary
+
+        */
         $total_purchase = DB::table('purchase_details as pd')
             ->leftJoin('purchase_return_items as pri', 'pd.product_id', '=', 'pri.product_id')
             ->select(DB::raw('
@@ -87,11 +85,10 @@ class ProfitlossController extends Controller
     public function profitLossReport(Request $request)
     {
         /*
-        =====================
-        Date Range
-        =====================
-        */
 
+        Date Range
+
+        */
         $startDate = $request->start_date
             ? Carbon::parse($request->start_date)->startOfDay()
             : Carbon::today()->startOfDay();
@@ -101,20 +98,14 @@ class ProfitlossController extends Controller
             : Carbon::today()->endOfDay();
 
         /*
-        =====================
-        NEW PRODUCTS
-        =====================
-        | Last purchase price না নিয়ে
-        | sale_date অনুযায়ী previous latest purchase price নেওয়া হবে
-        =====================
-        */
 
+        NEW PRODUCTS
+
+        */
         $newProductsRaw = DB::table('sale_details as sd')
             ->join('sales as s', 's.id', '=', 'sd.sale_id')
             ->join('products as p', 'p.id', '=', 'sd.product_id')
-
             ->whereBetween('s.sale_date', [$startDate, $endDate])
-
             ->select(
                 'sd.product_id',
                 'p.product_name',
@@ -122,28 +113,22 @@ class ProfitlossController extends Controller
                 'sd.price',
                 'sd.total',
                 's.sale_date',
-
-                DB::raw("
-                    (
-                        SELECT pd.price
-                        FROM purchase_details pd
-                        INNER JOIN purchases pu
-                            ON pu.id = pd.purchase_id
-                        WHERE pd.product_id = sd.product_id
-                        AND pu.date <= s.sale_date
-                        ORDER BY pu.date DESC, pd.id DESC
-                        LIMIT 1
-                    ) as purchase_price
-                ")
+                DB::raw("(
+                    SELECT pd.price
+                    FROM purchase_details pd
+                    INNER JOIN purchases pu ON pu.id = pd.purchase_id
+                    WHERE pd.product_id = sd.product_id
+                    AND pu.date <= s.sale_date
+                    ORDER BY pu.date DESC, pd.id DESC
+                    LIMIT 1
+                ) as purchase_price")
             )
             ->get();
 
         $newProducts = $newProductsRaw
             ->groupBy('product_id')
             ->map(function ($items) {
-
                 $first = $items->first();
-
                 $totalQty = $items->sum('qty');
                 $totalSale = $items->sum('total');
                 $salePrice = $items->avg('price');
@@ -172,11 +157,10 @@ class ProfitlossController extends Controller
             ->values();
 
         /*
-        =====================
-        NEW PRODUCT TOTALS
-        =====================
-        */
 
+        NEW PRODUCT TOTALS
+
+        */
         $newProductTotalQty = $newProducts->sum('total_qty');
         $newProductTotalPurchase = $newProducts->sum('purchase_price');
         $newProductTotalCost = $newProducts->sum('total_cost');
@@ -185,17 +169,14 @@ class ProfitlossController extends Controller
         $newProductTotalProfit = $newProducts->sum('profit_loss');
 
         /*
-        =====================
-        OLD PRODUCTS
-        =====================
-        */
 
+        OLD PRODUCTS
+
+        */
         $oldProducts = DB::table('old_product_sale_details as osd')
             ->join('old_product_sales as os', 'os.id', '=', 'osd.sale_id')
             ->join('old_products as op', 'op.id', '=', 'osd.old_product_id')
-
             ->whereBetween('os.sale_date', [$startDate, $endDate])
-
             ->select(
                 'op.product_name',
                 DB::raw('AVG(osd.buy_price) as purchase_price'),
@@ -205,60 +186,48 @@ class ProfitlossController extends Controller
                 DB::raw('SUM(osd.subtotal) as total_sale'),
                 DB::raw('SUM(osd.subtotal) - SUM(osd.qty * osd.buy_price) as profit_loss')
             )
-
             ->groupBy('op.product_name')
             ->get();
 
         /*
-        =====================
-        EXPENSE
-        =====================
-        */
 
+        EXPENSE
+
+        */
         $expenses = DB::table('expenses')
             ->whereBetween('expense_date', [$startDate, $endDate])
             ->sum('total');
 
         /*
-        =====================
-        TRANSPORT
-        =====================
-        */
 
+        TRANSPORT
+
+        */
         $transport = DB::table('purchases')
             ->whereBetween('date', [$startDate, $endDate])
             ->sum('shipping_amount');
 
         /*
-        =====================
+
         FINAL TOTAL
-        =====================
+
         */
-
         $totalSale = $newProducts->sum('total_sale') + $oldProducts->sum('total_sale');
-
         $totalCost = $newProducts->sum('total_cost') + $oldProducts->sum('total_cost');
-
         $grossProfit = $totalSale - $totalCost;
-
         $netProfit = $grossProfit - $expenses - $transport;
 
         return view('reports.profit_loss', compact(
             'startDate',
             'endDate',
-
             'newProducts',
             'oldProducts',
-
             'expenses',
             'transport',
-
             'totalSale',
             'totalCost',
             'grossProfit',
             'netProfit',
-
-            // NEW PRODUCT TOTALS
             'newProductTotalQty',
             'newProductTotalPurchase',
             'newProductTotalCost',
@@ -278,52 +247,34 @@ class ProfitlossController extends Controller
             ? Carbon::parse($request->end_date)->endOfDay()
             : Carbon::today()->endOfDay();
 
-        /*
-        |--------------------------------------------------------------------------
-        | NEW PRODUCTS
-        |--------------------------------------------------------------------------
-        | এখন last purchase price না নিয়ে,
-        | যে sale_date এ বিক্রি হয়েছে তার আগের সর্বশেষ purchase price নেওয়া হবে
-        |--------------------------------------------------------------------------
-        */
-
         $newProductsRaw = DB::table('sale_details as sd')
             ->join('sales as s', 's.id', '=', 'sd.sale_id')
             ->join('products as p', 'p.id', '=', 'sd.product_id')
-
             ->whereBetween('s.sale_date', [$startDate, $endDate])
-
             ->select(
                 'sd.product_id',
                 'p.product_name',
                 'sd.qty',
                 'sd.total',
                 's.sale_date',
-
-                DB::raw("
-                    (
-                        SELECT pd.price
-                        FROM purchase_details pd
-                        INNER JOIN purchases pu
-                            ON pu.id = pd.purchase_id
-                        WHERE pd.product_id = sd.product_id
-                        AND pu.date <= s.sale_date
-                        ORDER BY pu.date DESC, pd.id DESC
-                        LIMIT 1
-                    ) as purchase_price
-                ")
+                DB::raw("(
+                    SELECT pd.price
+                    FROM purchase_details pd
+                    INNER JOIN purchases pu ON pu.id = pd.purchase_id
+                    WHERE pd.product_id = sd.product_id
+                    AND pu.date <= s.sale_date
+                    ORDER BY pu.date DESC, pd.id DESC
+                    LIMIT 1
+                ) as purchase_price")
             )
             ->get();
 
         $newProducts = $newProductsRaw
             ->groupBy('product_id')
             ->map(function ($items) {
-
                 $first = $items->first();
-
                 $totalQty = $items->sum('qty');
                 $totalSale = $items->sum('total');
-
                 $totalCost = $items->sum(function ($row) {
                     $purchasePrice = $row->purchase_price ?? 0;
                     return $row->qty * $purchasePrice;
@@ -344,7 +295,6 @@ class ProfitlossController extends Controller
         | OLD PRODUCTS
         |--------------------------------------------------------------------------
         */
-
         $oldProducts = DB::table('old_product_sale_details as osd')
             ->join('old_product_sales as os', 'os.id', '=', 'osd.sale_id')
             ->join('old_products as op', 'op.id', '=', 'osd.old_product_id')
@@ -363,7 +313,6 @@ class ProfitlossController extends Controller
         | EXPENSES
         |--------------------------------------------------------------------------
         */
-
         $expenses = DB::table('expenses')
             ->whereBetween('expense_date', [$startDate, $endDate])
             ->sum('total');
@@ -377,24 +326,46 @@ class ProfitlossController extends Controller
         | FINAL CALCULATION
         |--------------------------------------------------------------------------
         */
-
         $totalSale = $newProducts->sum('total_sale') + $oldProducts->sum('total_sale');
-
         $totalCost = $newProducts->sum('total_cost') + $oldProducts->sum('total_cost');
-
         $totalExpense = $expenses + $transport;
-
         $grossProfit = $totalSale - $totalCost;
-
         $netProfitFinal = $grossProfit - $totalExpense;
 
         /*
         |--------------------------------------------------------------------------
-        | PDF
+        | mPDF - বাংলা সাপোর্ট
         |--------------------------------------------------------------------------
         */
+        $defaultConfig = (new ConfigVariables())->getDefaults();
+        $fontDirs = $defaultConfig['fontDir'];
 
-        $pdf = Pdf::loadView('reports.profit_loss_pdf', compact(
+        $defaultFontConfig = (new FontVariables())->getDefaults();
+        $fontData = $defaultFontConfig['fontdata'];
+
+        $mpdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'default_font' => 'solaimanlipi',
+            'fontDir' => array_merge($fontDirs, [
+                public_path('fonts'),
+            ]),
+            'fontdata' => $fontData + [
+                'solaimanlipi' => [
+                    'R' => 'SolaimanLipi.ttf',
+                    'B' => 'SolaimanLipi.ttf',
+                    'useOTL' => 0xFF,
+                    'useKashida' => 75,
+                ]
+            ],
+            'margin_top' => 15,
+            'margin_right' => 10,
+            'margin_bottom' => 15,
+            'margin_left' => 10,
+            'tempDir' => storage_path('temp'),
+        ]);
+
+        $html = view('reports.profit_loss_pdf', compact(
             'startDate',
             'endDate',
             'newProducts',
@@ -406,8 +377,9 @@ class ProfitlossController extends Controller
             'totalExpense',
             'grossProfit',
             'netProfitFinal'
-        ));
+        ))->render();
 
-        return $pdf->download('profit-loss-report.pdf');
+        $mpdf->WriteHTML($html);
+        return $mpdf->Output('profit-loss-report.pdf', 'I');
     }
 }

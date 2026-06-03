@@ -26,9 +26,9 @@ class SaleDetail extends Model
     {
         return $this->belongsTo(Sales::class, 'sale_id');
     }
-    public function saleDetail()
-    {
-        return $this->hasOne(SaleDetail::class, 'sale_id', 'sale_id')
-            ->where('product_id', $this->old_product_id); // <-- use value from this model
-    }
+    // public function saleDetail()
+    // {
+    //     return $this->hasOne(SaleDetail::class, 'sale_id', 'sale_id')
+    //         ->where('product_id', $this->old_product_id); // <-- use value from this model
+    // }
 }

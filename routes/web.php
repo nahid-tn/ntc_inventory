@@ -51,7 +51,7 @@ Route::middleware(['auth','admin'])->group(function () {
     Route::post('brand/create', [BrandController::class, 'Create'])->name('brand.create');
     Route::get('/brand/edit/{id}', [BrandController::class, 'Edit'])->name('brand.edit');
     Route::put('/brand/update/{id}', [BrandController::class, 'update'])->name('brand.update');
-    Route::get('brand/delete/{id}', [BrandController::class, 'Destry'])->name('brand.delete');
+    Route::get('brand/delete/{id}', [BrandController::class, 'destroy'])->name('brand.delete');
     Route::get('/brand/autocomplete', [BrandController::class, 'autocomplete'])->name('brand.autocomplete');
     Route::get('/brand/create', [BrandController::class, 'createPage'])->name('brand.create.page');
     
@@ -61,7 +61,7 @@ Route::middleware(['auth','admin'])->group(function () {
     Route::post('supplier/create', [SupplierController::class, 'Create'])->name('supplier.create');
     Route::get('/supplier/edit/{id}', [SupplierController::class, 'Edit'])->name('supplier.edit');
     Route::post('/supplier/update/{id}', [SupplierController::class, 'update'])->name('supplier.update');
-    Route::get('supplier/delete/{id}', [SupplierController::class, 'Destry'])->name('supplier.delete');
+    Route::get('supplier/delete/{id}', [SupplierController::class, 'destroy'])->name('supplier.delete');
     Route::get('/supplier-autocomplete', [SupplierController::class, 'autocomplete'])->name('supplier.autocomplete');
     Route::get('/supplier-ledger/pdf/{id}', [SupplierController::class,'ledgerPdf'] )->name('supplier.ledger.pdf');
     Route::get('/supplier/{id}/payments', [SupplierController::class, 'paymentList'])->name('supplier.payment.list');
@@ -71,11 +71,12 @@ Route::middleware(['auth','admin'])->group(function () {
     Route::get('product/index', [ProductController::class, 'index'])->name('product.index');
     Route::get('product/productform', [ProductController::class, 'ProductForm'])->name('product.productform');
     Route::get('/product-search', [ProductController::class, 'search'])->name('product.search');
-    Route::post('product/create', [ProductController::class, 'Create'])->name('product.create');
+    Route::post('/product/create', [ProductController::class, 'store'])
+    ->name('product.create');
     Route::get('/product/edit/{id}', [ProductController::class, 'Edit'])->name('product.edit');
     Route::get('/product/{id}', [ProductController::class, 'show'])->name('product.show');
-    Route::post('/product/update/{id}', [ProductController::class, 'Update'])->name('product.update');
-    Route::get('product/delete/{id}', [ProductController::class, 'Destry'])->name('product.delete');
+    Route::put('/product/update/{id}', [ProductController::class, 'update'])->name('product.update');
+    Route::delete('/product/{product}', [ProductController::class, 'destroy'])->name('product.destroy');
     Route::get('/product-autocomplete', [ProductController::class, 'autocomplete'])->name('product.autocomplete');
     Route::get('/stock-report', [ProductController::class, 'stockReport'])->name('stock.report');
     Route::get('/product/check-name', [ProductController::class, 'checkName'])->name('product.check.name');
@@ -86,7 +87,7 @@ Route::middleware(['auth','admin'])->group(function () {
     Route::post('customer/create', [CustomerController::class, 'Create'])->name('customer.create');
     Route::get('/customer/edit/{id}', [CustomerController::class, 'Edit'])->name('customer.edit');
     Route::post('/customer/update/{id}', [CustomerController::class, 'update'])->name('customer.update');
-    Route::get('customer/delete/{id}', [CustomerController::class, 'Destry'])->name('customer.delete');
+    Route::get('customer/delete/{id}', [CustomerController::class, 'destroy'])->name('customer.delete');
     Route::get('/customer-autocomplete', [CustomerController::class, 'autocomplete'])->name('customer.autocomplete');
 
     // কাস্টমারের রিপোর্ট
@@ -152,6 +153,7 @@ Route::middleware(['auth','admin'])->group(function () {
     // রাউট
     Route::put('sale/partial-payment/{id}/update', [SalesController::class, 'updatePartialPayment'])->name('sale.updatePartialPayment');
     Route::delete('sale/partial-payment/{id}/delete', [SalesController::class, 'deletePartialPayment'])->name('sale.deletePartialPayment');
+    Route::get('sale/{id}/partial-payment-pdf', [SalesController::class, 'partialPaymentPdf'])->name('sale.partialPaymentPdf');
 
     Route::get('/sales-report', [SalesReportController::class,'index'])->name('sales.report');
     Route::get('/sales-report/filter', [SalesReportController::class,'filter'])->name('sales.report.filter');
@@ -241,7 +243,6 @@ Route::middleware(['auth','admin'])->group(function () {
     Route::get('/supplier/{id}/invoices', [SupplierPaymentController::class,'supplierInvoices']);
     Route::get('/supplier-payment', [SupplierPaymentController::class, 'index'])->name('supplier.payment.index');
     Route::delete('/supplier-payment/{id}/delete', [SupplierPaymentController::class, 'destroy'])->name('supplier.payment.destroy');
-
 
     // IPS System Routes
     Route::get('/ips-calculator', [IpsCalculatorController::class, 'index'])->name('ips.form');

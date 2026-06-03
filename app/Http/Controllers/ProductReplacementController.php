@@ -10,8 +10,12 @@ use App\Models\Product;
 use App\Models\OldProduct;
 use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
-use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\SaleDetail; //
+use Mpdf\Mpdf;
+use Mpdf\Output\Destination;
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
+use App\Models\CompanyInfo;
 
 
 class ProductReplacementController extends Controller
@@ -109,53 +113,53 @@ class ProductReplacementController extends Controller
     }
         // Update replacement
     public function update(Request $request, $id)
-{
-    $request->validate([
-        'sale_id'        => 'required|exists:sales,id',
-        'old_product_id' => 'required|exists:products,id',
-        'new_product_id' => 'required|exists:products,id',
-        'qty'            => 'required|integer|min:1',
-        'price'          => 'required|numeric|min:0',
-    ]);
-
-    $replacement = ProductReplacement::findOrFail($id);
-
-    DB::transaction(function () use ($request, $replacement) {
-
-        // 🔁 Revert previous stock
-        Product::where('id', $replacement->old_product_id)
-            ->increment('stock', $replacement->qty);
-
-        Product::where('id', $replacement->new_product_id)
-            ->decrement('stock', $replacement->qty);
-
-        // 🔄 Update replacement record
-        $replacement->update([
-            'sale_id'        => $request->sale_id,
-            'old_product_id' => $request->old_product_id,
-            'new_product_id' => $request->new_product_id,
-            'qty'            => $request->qty,
-            'unit'            => $request->unit,
-            'price'          => $request->price,
-            'total'          => $request->qty * $request->price,
-            'replaceMent_date'=> $request->replaceMent_date,
-            'body_date'       => $request->body_date,
-            'replaceMent_fee' => $request->replaceMent_fee,
-            'is_active'      => true,
+    {
+        $request->validate([
+            'sale_id'        => 'required|exists:sales,id',
+            'old_product_id' => 'required|exists:products,id',
+            'new_product_id' => 'required|exists:products,id',
+            'qty'            => 'required|integer|min:1',
+            'price'          => 'required|numeric|min:0',
         ]);
 
-        // 🔁 Adjust stock for new values
-        Product::where('id', $request->old_product_id)
-            ->decrement('stock', $request->qty);
+        $replacement = ProductReplacement::findOrFail($id);
 
-        Product::where('id', $request->new_product_id)
-            ->increment('stock', $request->qty);
-    });
+        DB::transaction(function () use ($request, $replacement) {
 
-    return redirect()
-        ->route('replacement.index')
-        ->with('success', 'Replacement updated successfully!');
-}
+            // 🔁 Revert previous stock
+            Product::where('id', $replacement->old_product_id)
+                ->increment('stock', $replacement->qty);
+
+            Product::where('id', $replacement->new_product_id)
+                ->decrement('stock', $replacement->qty);
+
+            // 🔄 Update replacement record
+            $replacement->update([
+                'sale_id'        => $request->sale_id,
+                'old_product_id' => $request->old_product_id,
+                'new_product_id' => $request->new_product_id,
+                'qty'            => $request->qty,
+                'unit'            => $request->unit,
+                'price'          => $request->price,
+                'total'          => $request->qty * $request->price,
+                'replaceMent_date'=> $request->replaceMent_date,
+                'body_date'       => $request->body_date,
+                'replaceMent_fee' => $request->replaceMent_fee,
+                'is_active'      => true,
+            ]);
+
+            // 🔁 Adjust stock for new values
+            Product::where('id', $request->old_product_id)
+                ->decrement('stock', $request->qty);
+
+            Product::where('id', $request->new_product_id)
+                ->increment('stock', $request->qty);
+        });
+
+        return redirect()
+            ->route('replacement.index')
+            ->with('success', 'Replacement updated successfully!');
+    }
 
     // Delete replacement
     public function destroy($id) {
@@ -223,29 +227,38 @@ class ProductReplacementController extends Controller
         });
         return response()->json($results);
     }
-
     public function invoicePdf($id)
-    {
-        $replacement = ProductReplacement::with([
-            'sale.customer',
-            'newProduct',
-        ])->findOrFail($id);
+{
+    $replacement = ProductReplacement::with([
+        'sale.customer',
+        'newProduct',
+    ])->findOrFail($id);
 
-        // ✅ EXACTLY same logic as view()
-        $oldSaleDetail = SaleDetail::with('product')
-            ->where('sale_id', $replacement->sale_id)
-            ->where('product_id', $replacement->old_product_id)
-            ->first();
+    $oldSaleDetail = SaleDetail::with('product')
+        ->where('sale_id', $replacement->sale_id)
+        ->where('product_id', $replacement->old_product_id)
+        ->first();
 
-        $pdf = Pdf::loadView(
-            'replacement.invoice_pdf',
-            compact('replacement', 'oldSaleDetail')
-        );
+    $companyInfo = CompanyInfo::first();
 
-        $pdf->setPaper('A4', 'portrait');
+    $html = view(
+    'replacement.invoice_pdf',
+    compact('replacement', 'oldSaleDetail', 'companyInfo')
+)->render();
 
-        return $pdf->download('replacement_invoice_'.$replacement->id.'.pdf');
-    }
+$mpdf = new \Mpdf\Mpdf([
+    'mode' => 'utf-8',
+    'format' => 'A4',
+    'default_font' => 'dejavusans',
+]);
+
+$mpdf->WriteHTML($html);
+
+return $mpdf->Output(
+    'replacement_invoice_' . $replacement->id . '.pdf',
+    \Mpdf\Output\Destination::DOWNLOAD
+);
+}
 }
 
  

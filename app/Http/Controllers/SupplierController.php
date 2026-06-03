@@ -7,8 +7,13 @@ use App\Models\Supplier;
 use App\Models\Purchase;
 use App\Models\SupplierPayment;
 use App\Models\PurchaseReturn;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use App\Models\CompanyInfo;
+use Mpdf\Mpdf;
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
+
+
 
 class SupplierController extends Controller
 {
@@ -121,146 +126,323 @@ class SupplierController extends Controller
         ]);
     }
 
+    // public function ledgerPdf(Request $request, $supplierId)
+    // {
+    //     $from = $request->from;
+    //     $to   = $request->to;
+    //     $supplier = Supplier::findOrFail($supplierId);
+    //     $ledger = collect();
+    //     // Opening Balance (Before From Date)
+    //     $openingBalance = 0;
+
+    //     if ($from) {
+
+    //         $prevDate = Carbon::parse($from)->subDay();
+
+    //         // Previous Purchases (Credit)
+    //         $prevPurchase = Purchase::where('supplier_id', $supplierId)
+    //             ->where('date', '<=', $prevDate)
+    //             ->sum('subtotal');
+
+    //         // Previous Returns (Debit)
+    //         $prevReturn = PurchaseReturn::where('supplier_id', $supplierId)
+    //             ->where('return_date', '<=', $prevDate)
+    //             ->sum('total_amount');
+
+    //         // Previous Payments (Debit)
+    //         $prevPayment = SupplierPayment::where('supplier_id', $supplierId)
+    //             ->where('payment_date', '<=', $prevDate)
+    //             ->sum('amount');
+
+    //         // Debit - Credit
+    //         $openingBalance = ($prevReturn + $prevPayment) - $prevPurchase;
+    //     }
+
+    //     // Purchases (CREDIT)
+    //     $purchases = Purchase::with('items.product')
+    //         ->where('supplier_id', $supplierId)
+    //         ->when($from, fn($q)=>$q->where('date','>=',$from))
+    //         ->when($to, fn($q)=>$q->where('date','<=',$to))
+    //         ->get();
+
+    //     foreach ($purchases as $p) {
+
+    //         $items = $p->items->map(function($i){
+    //             return [
+    //                 'name' => $i->product->product_name ?? '',
+    //                 'qty'  => $i->qty,
+    //                 'rate' => $i->price
+    //             ];
+    //         });
+
+    //         $ledger->push([
+    //             'date'    => $p->date,
+    //             'type'    => 'Purchase',
+    //             'voucher' => $p->Invoice_no,
+    //             'debit'   => 0,
+    //             'credit'  => $p->subtotal,
+    //             'items'   => $items,
+    //             'note'    => $p->note ?? '',
+    //         ]);
+    //     }
+    //     // Purchase Return (DEBIT)
+
+    //     $returns = PurchaseReturn::with('items.product')
+    //         ->where('supplier_id', $supplierId)
+    //         ->when($from, fn($q)=>$q->where('return_date','>=',$from))
+    //         ->when($to, fn($q)=>$q->where('return_date','<=',$to))
+    //         ->get();
+
+    //     foreach ($returns as $r) {
+    //         $items = $r->items->map(function($i){
+    //             return [
+    //                 'name' => $i->product->product_name ?? '',
+    //                 'qty'  => $i->qty,
+    //                 'rate' => $i->price
+    //             ];
+    //         });
+    //         $ledger->push([
+    //             'date'    => $r->return_date,
+    //             'type'    => 'Purchase Return',
+    //             'voucher' => $r->return_no,
+    //             'debit'   => $r->total_amount,
+    //             'credit'  => 0,
+    //             'items'   => $items,
+    //             'note'    => $r->note ?? '',
+    //         ]);
+    //     }
+
+    //     // Payments (DEBIT)
+    //     $payments = SupplierPayment::where('supplier_id', $supplierId)
+    //         ->when($from, fn($q)=>$q->where('payment_date','>=',$from))
+    //         ->when($to, fn($q)=>$q->where('payment_date','<=',$to))
+    //         ->get();
+    //     foreach ($payments as $p) {
+    //         $ledger->push([
+    //             'date'    => $p->payment_date,
+    //             'type'    => 'Payment',
+    //             'voucher' => $p->voucher_no ?? '',
+    //             'debit'   => $p->amount,
+    //             'credit'  => 0,
+    //             'items'   => collect(),
+    //             'note'    => $p->note ?? '',
+    //         ]);
+    //     }
+
+
+    //     // Sort by Date
+    //     $ledger = $ledger->sortBy('date')->values();
+
+    //     // Running Balance
+    //     $runningBalance = $openingBalance;
+    //     $totalDebit  = 0;
+    //     $totalCredit = 0;
+    //     $ledger = $ledger->map(function ($row) use (&$runningBalance, &$totalDebit, &$totalCredit){
+    //         $debit  = $row['debit'];
+    //         $credit = $row['credit'];
+    //         $totalDebit  += $debit;
+    //         $totalCredit += $credit;
+    //         $runningBalance += ($debit - $credit);
+    //         $row['running_balance'] = $runningBalance;
+    //         return $row;
+    //     });
+
+    //     $closingBalance = $runningBalance;
+    //     // Generate PDF
+
+    //     $pdf = Pdf::loadView('supplier.ledger_pdf', [
+    //         'supplier'       => $supplier,
+    //         'ledger'         => $ledger,
+    //         'from'           => $from,
+    //         'to'             => $to,
+    //         'openingBalance' => $openingBalance,
+    //         'closingBalance' => $closingBalance,
+    //         'totalDebit'     => $totalDebit,
+    //         'totalCredit'    => $totalCredit,
+
+    //     ]);
+
+    //     $currentDate = Carbon::now()->format('Y-m-d_H-i-s');
+    //     $fileName = $supplier->id . '_' .$supplier->supplier_name. '_' . $currentDate . 'supplier_ledger.pdf';
+    //     return $pdf->download($fileName);
+    // }
     public function ledgerPdf(Request $request, $supplierId)
-    {
-        $from = $request->from;
-        $to   = $request->to;
-        $supplier = Supplier::findOrFail($supplierId);
-        $ledger = collect();
-        // Opening Balance (Before From Date)
-        $openingBalance = 0;
+{
+    $from = $request->from;
+    $to   = $request->to;
 
-        if ($from) {
+    $supplier = Supplier::findOrFail($supplierId);
+    $company = CompanyInfo::first();
 
-            $prevDate = Carbon::parse($from)->subDay();
+    $ledger = collect();
 
-            // Previous Purchases (Credit)
-            $prevPurchase = Purchase::where('supplier_id', $supplierId)
-                ->where('date', '<=', $prevDate)
-                ->sum('subtotal');
+    // =====================
+    // OPENING BALANCE
+    // =====================
+    $openingBalance = 0;
 
-            // Previous Returns (Debit)
-            $prevReturn = PurchaseReturn::where('supplier_id', $supplierId)
-                ->where('return_date', '<=', $prevDate)
-                ->sum('total_amount');
+    if ($from) {
+        $prevDate = Carbon::parse($from)->subDay();
 
-            // Previous Payments (Debit)
-            $prevPayment = SupplierPayment::where('supplier_id', $supplierId)
-                ->where('payment_date', '<=', $prevDate)
-                ->sum('amount');
+        $prevPurchase = Purchase::where('supplier_id', $supplierId)
+            ->where('date', '<=', $prevDate)
+            ->sum('subtotal');
 
-            // Debit - Credit
-            $openingBalance = ($prevReturn + $prevPayment) - $prevPurchase;
-        }
+        $prevReturn = PurchaseReturn::where('supplier_id', $supplierId)
+            ->where('return_date', '<=', $prevDate)
+            ->sum('total_amount');
 
-        // Purchases (CREDIT)
-        $purchases = Purchase::with('items.product')
-            ->where('supplier_id', $supplierId)
-            ->when($from, fn($q)=>$q->where('date','>=',$from))
-            ->when($to, fn($q)=>$q->where('date','<=',$to))
-            ->get();
+        $prevPayment = SupplierPayment::where('supplier_id', $supplierId)
+            ->where('payment_date', '<=', $prevDate)
+            ->sum('amount');
 
-        foreach ($purchases as $p) {
-
-            $items = $p->items->map(function($i){
-                return [
-                    'name' => $i->product->product_name ?? '',
-                    'qty'  => $i->qty,
-                    'rate' => $i->price
-                ];
-            });
-
-            $ledger->push([
-                'date'    => $p->date,
-                'type'    => 'Purchase',
-                'voucher' => $p->Invoice_no,
-                'debit'   => 0,
-                'credit'  => $p->subtotal,
-                'items'   => $items,
-                'note'    => $p->note ?? '',
-            ]);
-        }
-        // Purchase Return (DEBIT)
-
-        $returns = PurchaseReturn::with('items.product')
-            ->where('supplier_id', $supplierId)
-            ->when($from, fn($q)=>$q->where('return_date','>=',$from))
-            ->when($to, fn($q)=>$q->where('return_date','<=',$to))
-            ->get();
-
-        foreach ($returns as $r) {
-            $items = $r->items->map(function($i){
-                return [
-                    'name' => $i->product->product_name ?? '',
-                    'qty'  => $i->qty,
-                    'rate' => $i->price
-                ];
-            });
-            $ledger->push([
-                'date'    => $r->return_date,
-                'type'    => 'Purchase Return',
-                'voucher' => $r->return_no,
-                'debit'   => $r->total_amount,
-                'credit'  => 0,
-                'items'   => $items,
-                'note'    => $r->note ?? '',
-            ]);
-        }
-
-        // Payments (DEBIT)
-        $payments = SupplierPayment::where('supplier_id', $supplierId)
-            ->when($from, fn($q)=>$q->where('payment_date','>=',$from))
-            ->when($to, fn($q)=>$q->where('payment_date','<=',$to))
-            ->get();
-        foreach ($payments as $p) {
-            $ledger->push([
-                'date'    => $p->payment_date,
-                'type'    => 'Payment',
-                'voucher' => $p->voucher_no ?? '',
-                'debit'   => $p->amount,
-                'credit'  => 0,
-                'items'   => collect(),
-                'note'    => $p->note ?? '',
-            ]);
-        }
-
-
-        // Sort by Date
-        $ledger = $ledger->sortBy('date')->values();
-
-        // Running Balance
-        $runningBalance = $openingBalance;
-        $totalDebit  = 0;
-        $totalCredit = 0;
-        $ledger = $ledger->map(function ($row) use (&$runningBalance, &$totalDebit, &$totalCredit){
-            $debit  = $row['debit'];
-            $credit = $row['credit'];
-            $totalDebit  += $debit;
-            $totalCredit += $credit;
-            $runningBalance += ($debit - $credit);
-            $row['running_balance'] = $runningBalance;
-            return $row;
-        });
-
-        $closingBalance = $runningBalance;
-        // Generate PDF
-
-        $pdf = Pdf::loadView('supplier.ledger_pdf', [
-            'supplier'       => $supplier,
-            'ledger'         => $ledger,
-            'from'           => $from,
-            'to'             => $to,
-            'openingBalance' => $openingBalance,
-            'closingBalance' => $closingBalance,
-            'totalDebit'     => $totalDebit,
-            'totalCredit'    => $totalCredit,
-
-        ]);
-
-        $currentDate = Carbon::now()->format('Y-m-d_H-i-s');
-        $fileName = $supplier->id . '_' .$supplier->supplier_name. '_' . $currentDate . 'supplier_ledger.pdf';
-        return $pdf->download($fileName);
+        $openingBalance = ($prevReturn + $prevPayment) - $prevPurchase;
     }
+
+    // =====================
+    // PURCHASE
+    // =====================
+    $purchases = Purchase::with('details.product')
+        ->where('supplier_id', $supplierId)
+        ->when($from, fn($q) => $q->where('date', '>=', $from))
+        ->when($to, fn($q) => $q->where('date', '<=', $to))
+        ->get();
+
+    foreach ($purchases as $p) {
+
+        $items = $p->details->map(function ($i) {
+            return [
+                'name' => $i->product->product_name ?? '',
+                'qty'  => $i->qty,
+                'rate' => $i->price
+            ];
+        })->values();
+
+        $ledger->push([
+            'date'    => $p->date,
+            'type'    => 'Purchase',
+            'voucher' => $p->Invoice_no,
+            'debit'   => 0,
+            'credit'  => $p->subtotal,
+            'items'   => $items,
+            'note'    => $p->note ?? '',
+        ]);
+    }
+
+    // =====================
+    // RETURNS
+    // =====================
+    $returns = PurchaseReturn::with('items.product')
+        ->where('supplier_id', $supplierId)
+        ->when($from, fn($q) => $q->where('return_date', '>=', $from))
+        ->when($to, fn($q) => $q->where('return_date', '<=', $to))
+        ->get();
+
+    foreach ($returns as $r) {
+
+        $items = $r->items->map(function ($i) {
+            return [
+                'name' => $i->product->product_name ?? '',
+                'qty'  => $i->qty,
+                'rate' => $i->price
+            ];
+        })->values();
+
+        $ledger->push([
+            'date'    => $r->return_date,
+            'type'    => 'Return',
+            'voucher' => $r->invoice_no,
+            'debit'   => $r->total_amount,
+            'credit'  => 0,
+            'items'   => $items,
+            'note'    => $r->note ?? '',
+        ]);
+    }
+
+    // =====================
+    // PAYMENTS
+    // =====================
+    $payments = SupplierPayment::where('supplier_id', $supplierId)
+        ->when($from, fn($q) => $q->where('payment_date', '>=', $from))
+        ->when($to, fn($q) => $q->where('payment_date', '<=', $to))
+        ->get();
+
+    foreach ($payments as $p) {
+
+        $ledger->push([
+            'date'    => $p->payment_date,
+            'type'    => 'Payment',
+            'voucher' => $p->transaction_number,
+            'debit'   => $p->amount,
+            'credit'  => 0,
+            'items'   => collect(),
+            'note'    => $p->note ?? '',
+        ]);
+    }
+
+    // =====================
+    // SORT
+    // =====================
+    $ledger = $ledger->sortBy('date')->values()->toArray();
+
+    // =====================
+    // RUNNING BALANCE (SAFE ARRAY)
+    // =====================
+    $balance = $openingBalance;
+    $totalDebit = 0;
+    $totalCredit = 0;
+
+    foreach ($ledger as $k => $row) {
+        $debit  = $row['debit'] ?? 0;
+        $credit = $row['credit'] ?? 0;
+        $totalDebit  += $debit;
+        $totalCredit += $credit;
+        $balance += ($debit - $credit);
+        $ledger[$k]['running_balance'] = $balance;
+    }
+
+    $html = view('supplier.ledger_pdf', compact(
+        'supplier',
+        'ledger',
+        'from',
+        'to',
+        'openingBalance',
+        'company',
+        'totalDebit',
+        'totalCredit'
+    ))->render();
+
+    $mpdf = new \Mpdf\Mpdf([
+    'mode' => 'utf-8',
+    'format' => 'A4',
+
+    'autoScriptToLang' => true,
+    'autoLangToFont' => true,
+
+    'fontDir' => array_merge((new \Mpdf\Config\ConfigVariables())->getDefaults()['fontDir'], [
+        public_path('fonts')
+    ]),
+
+    'fontdata' => array_merge((new \Mpdf\Config\FontVariables())->getDefaults()['fontdata'], [
+        'solaimanlipi' => [
+            'R' => 'SolaimanLipi.ttf',
+            'useOTL' => 0xFF,
+            'useKashida' => 75,
+        ]
+    ]),
+
+    'default_font' => 'solaimanlipi'
+]);
+
+    $mpdf->SetAutoPageBreak(true, 15);
+    $mpdf->WriteHTML($html);
+
+    // return $mpdf->Output('ledger.pdf', 'D');
+    $currentDate = Carbon::now()->format('Y-m-d_H-i-s');
+         $fileName = $supplier->id . '_' .$supplier->supplier_name. '_' . $currentDate . 'supplier_ledger.pdf';
+         return $mpdf->Output($fileName, 'D');
+}
+
     public function paymentList($id)
     {
         $supplier = Supplier::findOrFail($id);

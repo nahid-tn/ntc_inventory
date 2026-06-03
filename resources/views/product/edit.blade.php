@@ -14,8 +14,9 @@
                     <p class="text-green-600">{{ session('success') }}</p>
                 @endif
 
-                <form action="{{ route('product.update', $products->id) }}" method="POST">
-                    @csrf
+<form action="{{ route('product.update', $product->id) }}" method="POST">
+    @csrf
+    @method('PUT')
 
                     <div class="row">
 
@@ -24,7 +25,7 @@
                             <label>Product Name</label>
                             <input type="text" class="form-control" 
                                    name="product_name"
-                                   value="{{ $products->product_name }}">
+                                   value="{{ $product->product_name }}">
                         </div>
 
                         {{-- Product Code --}}
@@ -32,7 +33,7 @@
                             <label>Product Code</label>
                             <input type="text" class="form-control" 
                                    name="product_code"
-                                   value="{{ $products->product_code }}">
+                                   value="{{ $product->product_code }}">
                         </div>
 
                     </div>
@@ -44,7 +45,7 @@
                             <label>Model Name</label>
                             <input type="text" class="form-control" 
                                    name="model_name"
-                                   value="{{ $products->model_name }}">
+                                   value="{{ $product->model_name }}">
                         </div>
 
                         {{-- Category --}}
@@ -52,10 +53,10 @@
                             <label>Category</label>
                             <input type="text" id="category_name"
                                    class="form-control"
-                                   value="{{ $categories->where('id',$products->category_id)->first()?->category_name }}">
+                                   value="{{ $categories->where('id',$product->category_id)->first()?->category_name }}">
                             <input type="hidden" name="category_id"
                                    id="category_id"
-                                   value="{{ $products->category_id }}">
+                                   value="{{ $product->category_id }}">
                         </div>
 
                     </div>
@@ -67,21 +68,21 @@
                             <label>Purchase Price</label>
                             <input type="number" class="form-control"
                                    name="purchase_price" step="0.01"
-                                   value="{{ $products->purchase_price }}">
+                                   value="{{ $product->purchase_price }}">
                         </div>
 
                         {{-- Selling Price --}}
                         <div class="col-md-6 mb-3">
                             <label>Selling Price</label>
                             <input type="number" class="form-control"
-                                   name="salling_price"
-                                   value="{{ $products->salling_price }}">
+                                   name="selling_price" step="0.01"
+                                   value="{{ $product->selling_price }}">
                         </div>
 
                     </div>
                      <div>
                             <label>Product Description</label>
-                            <textarea class="form-control" name="description" rows="4">{{ old('description', $products->description) }}</textarea>
+                            <textarea class="form-control" name="description" rows="4">{{ old('description', $product->description) }}</textarea>
                         </div>
                     <div class="row">
 
@@ -91,7 +92,7 @@
                             <input type="number" class="form-control"
                                    name="stock"
                                    id="stock"
-                                   value="{{ $products->stock }}">
+                                   value="{{ $product->stock }}">
                         </div>
 
                         {{-- Status --}}
@@ -99,7 +100,7 @@
                             <label>Status</label>
                             <input type="text" class="form-control"
                                    id="status"
-                                   value="{{ $products->stock <= 5 ? 'Low Stock' : 'In Stock' }}"
+                                   value="{{ $product->stock <= 5 ? 'Low Stock' : 'In Stock' }}"
                                    readonly>
                         </div>
 
@@ -112,7 +113,7 @@
                             💾 Update
                         </button>
 
-                        <a href="{{ route('product.show', $products->id) }}" 
+                        <a href="{{ route('product.show', $product->id) }}" 
                            class="btn btn-info me-2">
                             👁 View
                         </a>

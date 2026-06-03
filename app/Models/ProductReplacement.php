@@ -41,4 +41,8 @@ class ProductReplacement extends Model
     {
     return $this->sale->customer();
     }
-}
+    public function companyInfo()
+    {
+        return $this->belongsTo(CompanyInfo::class);
+    }
+}   

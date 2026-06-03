@@ -57,5 +57,9 @@ class Purchase extends Model
     {
         return $this->total_amount - $this->payments()->sum('amount');
     }
+    public function companyInfo()
+{
+    return $this->belongsTo(CompanyInfo::class, 'company_info_id');
+}
     
 }

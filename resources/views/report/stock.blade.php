@@ -30,7 +30,7 @@
                                 </a>
                             </td>
                             <td>{{ number_format($product->purchase_price, 2) }}</td>
-                            <td>{{ number_format($product->salling_price, 2) }}</td>
+                            <td>{{ number_format($product->selling_price, 2) }}</td>
                             <td>
                                 <strong>{{ intval($product->stock) }}</strong>
                             </td>

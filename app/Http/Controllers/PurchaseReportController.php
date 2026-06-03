@@ -14,6 +14,7 @@ use App\Models\ExpenseItem;
 use App\Models\SupplierPayment;
 use App\Models\OldProduct;
 use Illuminate\Support\Facades\DB;
+use Mpdf\Mpdf;
 
 class PurchaseReportController extends Controller
 {
@@ -118,36 +119,103 @@ class PurchaseReportController extends Controller
 
     public function stockReport()
     {
-        $products = DB::table('products')
-            ->leftJoin('purchase_details', 'purchase_details.product_id', '=', 'products.id')
-            ->select(
-                'products.id', // ✅ MUST (for link)
-                'products.product_name',
-                'products.purchase_price',
-                'products.salling_price',
-                DB::raw('COALESCE(SUM(purchase_details.qty),0) as total_qty'),
-                DB::raw('CAST(products.stock AS UNSIGNED) as stock')
-            )
-            ->groupBy(
-                'products.id',
-                'products.product_name',
-                'products.purchase_price',
-                'products.salling_price',
-                'products.stock'
-            )
-            ->paginate(15);
+        $stocks = DB::table('products')
+    ->leftJoin('purchase_details', 'purchase_details.product_id', '=', 'products.id')
+    ->select(
+        'products.id',
+        'products.product_name',
+        'products.purchase_price',
+        'products.selling_price',
+        DB::raw('COALESCE(SUM(purchase_details.qty),0) as total_qty'),
+        DB::raw('CAST(products.stock AS UNSIGNED) as stock')
+    )
+    ->groupBy(
+        'products.id',
+        'products.product_name',
+        'products.purchase_price',
+        'products.selling_price',
+        'products.stock'
+    )
+    ->paginate(15);
 
-        return view('purchase.stock_report', compact('products'));
+return view('purchase.stock_report', compact('stocks'));
     }
 
+    // public function supplierPayments(Request $request)
+    // {
+    //     $query = Supplier::query();
+    //     if ($request->supplier_id) {
+    //         $query->where('id', $request->supplier_id);
+    //     }
+    //     $suppliers = $query->with([
+    //         'payments' => function($q) use ($request){
+    //             if ($request->from_date && $request->to_date) {
+    //                 $q->whereBetween('payment_date', [
+    //                     $request->from_date,
+    //                     $request->to_date
+    //                 ]);
+    //             }
+    //         },
+    //         'purchases' => function($q) use ($request){
+    //             if ($request->from_date && $request->to_date) {
+    //                 $q->whereBetween('date', [
+    //                     $request->from_date,
+    //                     $request->to_date
+    //                 ]);
+    //             }
+    //         },
+    //         'returns' => function($q) use ($request){
+    //             if ($request->from_date && $request->to_date) {
+    //                 $q->whereBetween('return_date', [
+    //                     $request->from_date,
+    //                     $request->to_date
+    //                 ]);
+    //             }
+    //         },
+    //     ])->get();
+    //         $reports = $suppliers->map(function($s){
+    //         $totalPurchase = $s->purchases->sum('total_amount');
+    //         $purchasePayment = $s->purchases->sum('paid_amount');
+    //         $supplierPayment = $s->payments->sum('amount');
+    //         $totalReturn = $s->returns->sum('total_amount');
+    //         $totalPurchasesPay = $supplierPayment + $purchasePayment;
+    //         $totalPayment = $supplierPayment + $totalReturn;
+    //         $due = $totalPurchase - $totalPayment;
+
+    //     return [
+    //         'supplier' => $s,
+    //         'payments' => $s->payments,
+    //         'purchases' => $s->purchases,
+    //         'returns' => $s->returns,
+    //         'supplierPayment'    => $supplierPayment,
+    //         'purchasePayment'    => $purchasePayment,
+    //         'totalPurchasesPay'  => $totalPurchasesPay,
+    //         'totalPayment'       => $totalPayment,
+    //         'totalPurchase' => $totalPurchase,
+    //         'totalReturn'   => $totalReturn,
+    //         'due'           => $due,
+    //     ];
+    // });
+    //     // PDF Export
+    //     if ($request->has('pdf')) {
+    //         $pdf = \PDF::loadView(
+    //             'reports.supplier_payments_pdf',
+    //             compact('reports')
+    //         );
+    //         return $pdf->download('supplier-payments.pdf');
+    //     }
+    //     return view('reports.supplier_payments', compact('reports'));
+    // }
     public function supplierPayments(Request $request)
     {
         $query = Supplier::query();
+
         if ($request->supplier_id) {
             $query->where('id', $request->supplier_id);
         }
+
         $suppliers = $query->with([
-            'payments' => function($q) use ($request){
+            'payments' => function ($q) use ($request) {
                 if ($request->from_date && $request->to_date) {
                     $q->whereBetween('payment_date', [
                         $request->from_date,
@@ -155,7 +223,7 @@ class PurchaseReportController extends Controller
                     ]);
                 }
             },
-            'purchases' => function($q) use ($request){
+            'purchases' => function ($q) use ($request) {
                 if ($request->from_date && $request->to_date) {
                     $q->whereBetween('date', [
                         $request->from_date,
@@ -163,7 +231,7 @@ class PurchaseReportController extends Controller
                     ]);
                 }
             },
-            'returns' => function($q) use ($request){
+            'returns' => function ($q) use ($request) {
                 if ($request->from_date && $request->to_date) {
                     $q->whereBetween('return_date', [
                         $request->from_date,
@@ -172,37 +240,61 @@ class PurchaseReportController extends Controller
                 }
             },
         ])->get();
-            $reports = $suppliers->map(function($s){
+
+        $reports = $suppliers->map(function ($s) {
+
             $totalPurchase = $s->purchases->sum('total_amount');
             $purchasePayment = $s->purchases->sum('paid_amount');
             $supplierPayment = $s->payments->sum('amount');
             $totalReturn = $s->returns->sum('total_amount');
+
             $totalPurchasesPay = $supplierPayment + $purchasePayment;
             $totalPayment = $supplierPayment + $totalReturn;
             $due = $totalPurchase - $totalPayment;
 
-        return [
-            'supplier' => $s,
-            'payments' => $s->payments,
-            'purchases' => $s->purchases,
-            'returns' => $s->returns,
-            'supplierPayment'    => $supplierPayment,
-            'purchasePayment'    => $purchasePayment,
-            'totalPurchasesPay'  => $totalPurchasesPay,
-            'totalPayment'       => $totalPayment,
-            'totalPurchase' => $totalPurchase,
-            'totalReturn'   => $totalReturn,
-            'due'           => $due,
-        ];
-    });
-        // PDF Export
+            return [
+                'supplier'           => $s,
+                'payments'           => $s->payments,
+                'purchases'          => $s->purchases,
+                'returns'            => $s->returns,
+                'supplierPayment'    => $supplierPayment,
+                'purchasePayment'    => $purchasePayment,
+                'totalPurchasesPay'  => $totalPurchasesPay,
+                'totalPayment'       => $totalPayment,
+                'totalPurchase'      => $totalPurchase,
+                'totalReturn'        => $totalReturn,
+                'due'                => $due,
+            ];
+        });
+
+        // PDF Export Using mPDF
         if ($request->has('pdf')) {
-            $pdf = \PDF::loadView(
+
+            $html = view(
                 'reports.supplier_payments_pdf',
                 compact('reports')
+            )->render();
+
+            $mpdf = new \Mpdf\Mpdf([
+                'mode' => 'utf-8',
+                'format' => 'A4',
+            ]);
+
+            $mpdf->WriteHTML($html);
+
+            return response(
+                $mpdf->Output(
+                    'supplier-payments.pdf',
+                    \Mpdf\Output\Destination::STRING_RETURN
+                ),
+                200,
+                [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'attachment; filename="supplier-payments.pdf"',
+                ]
             );
-            return $pdf->download('supplier-payments.pdf');
         }
+
         return view('reports.supplier_payments', compact('reports'));
     }
 }

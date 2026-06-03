@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Models;
+use App\Models\CompanyInfo;
 
 use Illuminate\Database\Eloquent\Model;
 
@@ -35,5 +36,9 @@ class supplier extends Model
     public function purchaseOrders()
     {
         return $this->hasMany(PurchaseOrder::class);
+    }
+    public function companyInfo()
+    {
+        return $this->belongsTo(CompanyInfo::class, 'company_id');
     }
 }

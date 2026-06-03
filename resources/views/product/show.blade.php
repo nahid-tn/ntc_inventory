@@ -63,7 +63,7 @@
                     <div class="col-md-6 mb-3">
                         <label>Selling Price</label>
                         <input type="text" class="form-control" 
-                               value="{{ number_format($product->salling_price,2) }}" readonly>
+                               value="{{ number_format($product->selling_price,2) }}" readonly>
                     </div>
                     <div class="col-md-12 mb-3">
                         <label>Product Description</label>

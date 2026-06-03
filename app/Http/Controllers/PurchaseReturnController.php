@@ -10,7 +10,13 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Purchase;
 use App\Models\PurchaseDetail;
 use App\Models\Supplier;
-use PDF;
+use Mpdf\Mpdf;
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
+use Carbon\Carbon;
+use App\Models\CompanyInfo;
+use Picqer\Barcode\BarcodeGeneratorPNG;
+
 
 class PurchaseReturnController extends Controller
 {
@@ -19,8 +25,7 @@ class PurchaseReturnController extends Controller
      */
     public function index(Request $request)
     {
-        $query = PurchaseReturn::with(['items.product', 'supplier']);
-
+        $query = PurchaseReturn::with(['items.product', 'supplier', 'supplier.companyInfo']);
         // 🔍 Search (Supplier + Invoice)
         if ($request->filled('search')) {
             $query->where(function($q) use ($request) {
@@ -35,7 +40,6 @@ class PurchaseReturnController extends Controller
         if ($request->filled('from_date')) {
             $query->whereDate('return_date', '>=', $request->from_date);
         }
-
         if ($request->filled('to_date')) {
             $query->whereDate('return_date', '<=', $request->to_date);
         }
@@ -44,7 +48,6 @@ class PurchaseReturnController extends Controller
         $returns = $query->orderBy('return_date', 'desc')
                         ->paginate(15)
                         ->withQueryString();
-
         return view('purchase_returns.index', compact('returns'));
     }
     /**
@@ -241,20 +244,16 @@ class PurchaseReturnController extends Controller
         try {
             $purchaseReturn = PurchaseReturn::with('items.product')
                 ->findOrFail($id);
-
             /**
              * Stock Restore
              */
             foreach ($purchaseReturn->items as $item) {
                 $product = Product::find($item->product_id);
-
                 if ($product) {
                     $product->increment('stock', $item->qty);
-
                     $product->status = $product->stock <= 5
                         ? 'Low Stock'
                         : 'In Stock';
-
                     $product->save();
                 }
             }
@@ -263,21 +262,16 @@ class PurchaseReturnController extends Controller
              * Delete items first
              */
             $purchaseReturn->items()->delete();
-
             /**
              * Delete main row
              */
             $purchaseReturn->delete();
-
             DB::commit();
-
             return redirect()
                 ->route('purchase-returns.index')
                 ->with('success', 'Return Deleted & Stock Restored Successfully!');
         } catch (\Exception $e) {
-
             DB::rollBack();
-
             return redirect()
                 ->back()
                 ->withErrors($e->getMessage());
@@ -331,29 +325,128 @@ class PurchaseReturnController extends Controller
         return view('purchase_returns.report',compact('returns'));
     }
 
+    // public function exportPdf($id)
+    // {
+    //     // Fetch Purchase Return with relationships
+    //     $return = PurchaseReturn::with(['items.product', 'supplier'])
+    //                 ->findOrFail($id);
+
+    //     // Format values for file name
+    //     $date = \Carbon\Carbon::parse($return->return_date)->format('d-m-Y');
+    //     $invoiceNo = $return->return_no ?? 'NoInv';
+    //     $supplierName = $return->supplier->supplier_name ?? 'NoSupplier';
+    //     $supplierName = str_replace(' ', '_', $supplierName); // File safe
+
+    //     // Final PDF file name
+    //     $filename = $date . '-' . $invoiceNo . '-' . $supplierName . '.pdf';
+
+    //     // Generate PDF
+    //     $pdf = PDF::loadView('purchase_returns.pdf', compact('return'));
+    //     $pdf->setPaper('A4', 'portrait');
+
+    //     // Download
+    //     return $pdf->download($filename);
+    // }
     public function exportPdf($id)
     {
-        // Fetch Purchase Return with relationships
-        $return = PurchaseReturn::with(['items.product', 'supplier'])
-                    ->findOrFail($id);
+        // =====================
+        // LOAD DATA
+        // =====================
+        $return = PurchaseReturn::with([
+            'items.product',
+            'supplier',
+        ])->findOrFail($id);
 
-        // Format values for file name
-        $date = \Carbon\Carbon::parse($return->return_date)->format('d-m-Y');
+        $companyInfo = CompanyInfo::first();
+
+        // =====================
+        // FILE NAME
+        // =====================
+        $date = Carbon::parse($return->return_date)->format('d-m-Y');
         $invoiceNo = $return->return_no ?? 'NoInv';
-        $supplierName = $return->supplier->supplier_name ?? 'NoSupplier';
-        $supplierName = str_replace(' ', '_', $supplierName); // File safe
+        $supplierName = str_replace(' ', '_', $return->supplier->supplier_name ?? 'NoSupplier');
 
-        // Final PDF file name
         $filename = $date . '-' . $invoiceNo . '-' . $supplierName . '.pdf';
 
-        // Generate PDF
-        $pdf = PDF::loadView('purchase_returns.pdf', compact('return'));
-        $pdf->setPaper('A4', 'portrait');
+        // =====================
+        // CALCULATION
+        // =====================
+        $returns = collect([$return]);
+        $overallTotal = $return->items->sum('total') ?? 0;
 
-        // Download
-        return $pdf->download($filename);
+        $supplier = $return->supplier ?? null;
+        $from_date = $date;
+        $to_date = $date;
+
+        // =====================
+        // BARCODE (Invoice + Supplier + Company)
+        // =====================
+        $generator = new BarcodeGeneratorPNG();
+
+        $companyName = $companyInfo->company_name_bangla ?? 'COMPANY';
+        $supplierNameRaw = $return->supplier->supplier_name ?? 'SUPPLIER';
+        $invoiceRaw = $return->return_no ?? 'INV';
+
+        $barcodeText = $companyName . '|' . $supplierNameRaw . '|' . $invoiceRaw;
+
+        $barcode = base64_encode(
+            $generator->getBarcode($barcodeText, $generator::TYPE_CODE_128)
+        );
+
+        // =====================
+        // VIEW
+        // =====================
+        $html = view('purchase_returns.report_pdf', compact(
+            'return',
+            'returns',
+            'overallTotal',
+            'supplier',
+            'from_date',
+            'to_date',
+            'companyInfo',
+            'barcode'
+        ))->render();
+
+        // =====================
+        // FONT CONFIG (BANGLA FIX)
+        // =====================
+        $defaultConfig = (new ConfigVariables())->getDefaults();
+        $fontDirs = $defaultConfig['fontDir'];
+
+        $defaultFontConfig = (new FontVariables())->getDefaults();
+        $fontData = $defaultFontConfig['fontdata'];
+
+        $mpdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+
+            'autoScriptToLang' => true,
+            'autoLangToFont' => true,
+
+            'fontDir' => array_merge($fontDirs, [
+                public_path('fonts')
+            ]),
+
+            'fontdata' => $fontData + [
+                'solaimanlipi' => [
+                    'R' => 'SolaimanLipi.ttf',
+                ]
+            ],
+
+            'default_font' => 'solaimanlipi',
+
+            'margin_left' => 10,
+            'margin_right' => 10,
+            'margin_top' => 10,
+            'margin_bottom' => 10,
+        ]);
+
+        $mpdf->SetAutoPageBreak(true, 15);
+
+        $mpdf->WriteHTML($html);
+
+        return $mpdf->Output($filename, 'D');
     }
-
     public function generate(Request $request)
     {
         $request->validate([

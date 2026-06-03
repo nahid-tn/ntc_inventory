@@ -85,6 +85,7 @@
                     <button class="btn btn-primary">🔍 Search</button>
                     <button type="submit" formaction="{{ route('purchase.report.pdf') }}" formtarget="_blank" class="btn btn-danger"> 📄 PDF </button>
                 </div>
+                
             </div>
 
         </form>

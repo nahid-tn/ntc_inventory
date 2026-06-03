@@ -9,11 +9,13 @@ use App\Models\SaleDetail;
 use App\Models\Product;
 use App\Models\Customer;
 use Illuminate\Support\Facades\DB;
-use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\OldProduct;
 use App\Models\Unit;
 use App\Models\OldProductSaleDetail;
 use App\Models\OldProductPurchaseDetail;
+use Mpdf\Mpdf;
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
 
 class OldProductSaleController extends Controller
 {
@@ -201,19 +203,50 @@ class OldProductSaleController extends Controller
     }
 
     // Generate PDF Invoice
+    // public function invoicePdf($id)
+    // {
+    //     $sale = OldProductSale::with('customer', 'details.product')->findOrFail($id);
+
+    //     // Blade view-এ দুইটি রিপোর্ট তৈরি হবে (Challan + Invoice)
+    //     $pdf = Pdf::loadView('oldsale.invoice_pdf', compact('sale'));
+
+    //     // A4 size, portrait orientation
+    //     // width ~ 210mm, height ~ 297mm
+    //     // যদি প্রতিটি রিপোর্ট পৃষ্ঠা হয়, তাহলে আমরা page-break দিয়ে সাজাবো
+    //     $pdf->setPaper('A4');
+    //     // Generate PDF download
+    //     return $pdf->download('old_product_sale_'.$sale->invoice_no.'.pdf');
+    // }
+
     public function invoicePdf($id)
     {
-        $sale = OldProductSale::with('customer', 'details.product')->findOrFail($id);
+        $sale = OldProductSale::with('customer', 'details.product')
+            ->findOrFail($id);
+        $companyInfo = DB::table('company_info')->first();
+        $html = view('oldsale.invoice_pdf', compact('sale', 'companyInfo'))->render();
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
 
-        // Blade view-এ দুইটি রিপোর্ট তৈরি হবে (Challan + Invoice)
-        $pdf = Pdf::loadView('oldsale.invoice_pdf', compact('sale'));
+        $mpdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'orientation' => 'P',
+            'default_font' => 'dejavusans',
+            'margin_top' => 10,
+            'margin_bottom' => 10,
+            'margin_left' => 10,
+            'margin_right' => 10,
+            'autoPageBreak' => true,
+            'setAutoTopMargin' => 'stretch',
+            'setAutoBottomMargin' => 'stretch',
+        ]);
 
-        // A4 size, portrait orientation
-        // width ~ 210mm, height ~ 297mm
-        // যদি প্রতিটি রিপোর্ট পৃষ্ঠা হয়, তাহলে আমরা page-break দিয়ে সাজাবো
-        $pdf->setPaper('A4');
-        // Generate PDF download
-        return $pdf->download('old_product_sale_'.$sale->invoice_no.'.pdf');
+        $mpdf->WriteHTML($html);
+        // 🔥 Output PDF
+        return response()->streamDownload(function () use ($mpdf) {
+            echo $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
+        }, 'old_product_sale_' . $sale->invoice_no . '.pdf');
     }
 
     public function productsOldAutocomplete(Request $request)

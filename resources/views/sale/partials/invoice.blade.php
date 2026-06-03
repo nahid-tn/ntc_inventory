@@ -15,120 +15,172 @@
 
     {{-- INFO --}}
     <p style="margin:2px 0;">
-        <strong>Invoice:</strong> {{ $sale->invoice_no }} |
-        <strong>Date:</strong> {{ $sale->sale_date->format('d-m-Y') }}
+        <strong>Invoice:</strong> {{ $sale->invoice_no }} <br>
+        <strong>Date:</strong> {{ \Carbon\Carbon::parse($sale->sale_date)->format('d-m-Y') }}
     </p>
-    <p style="margin:2px 0;"><strong>Customer:</strong> {{ $sale->customer->customer_name ?? '' }}</p>
-    <p style="margin:2px 0;"><strong>Mobile:</strong> {{ $sale->customer->mobile ?? '' }} | <strong>Address:</strong> {{ $sale->customer->address ?? '' }}</p>
+    <p style="margin:2px 0;"><strong>Customer:</strong> {{ $sale->customer->customer_name ?? 'N/A' }}</p>
+    <p style="margin:2px 0;"><strong>Mobile:</strong> {{ $sale->customer->mobile ?? 'N/A' }} | <strong>Address:</strong> {{ $sale->customer->address ?? 'N/A' }}</p>
+    
     @php
         $sl = 1;
         $newTotal = 0;
         $oldTotal = 0;
-        $received = $sale->receivedPayments->sum('amount');
-        $paid     = ($sale->paid_amount ?? 0) + $received;
+        $received = $sale->receivedPayments ? $sale->receivedPayments->sum('amount') : 0;
+        $paid = $received;
+        $isBill = ($title == 'Bill Copy');
     @endphp
 
-    {{-- PRODUCTS --}}
-    <table>
+    {{-- PRODUCTS TABLE --}}
+    <table style="width:100%; border-collapse:collapse;">
         <thead>
-        <tr>
-            <th>SL</th>
-            <th>Product</th>
-            <th>Qty</th>
-            <th>Unit</th>
-            <th>Price</th>
-            <th>Total</th>
-        </tr>
-        </thead>
-        <tbody>
-
-        {{-- NEW PRODUCTS --}}
-        @foreach($sale->details as $item)
-            @php
-                $line = $item->qty * $item->price;
-                $newTotal += $line;
-            @endphp
-            <tr>
-                <td>{{ $sl++ }}</td>
-                <td>{{ $item->product->product_name ?? '' }}</td>
-                <td>{{ $item->qty }}</td>
-                <td>{{ $item->unit }}</td>
-                <td class="text-right">{{ $title=='Bill Copy' ? number_format($item->price,2) : '' }}</td>
-                <td class="text-right">{{ $title=='Bill Copy' ? number_format($line,2) : '' }}</td>
+            <tr style="background-color:#f0f0f0;">
+                <th style="border:1px solid #999; padding:4px; width:5%;">SL</th>
+                <th style="border:1px solid #999; padding:4px; width:35%;">Product</th>
+                <th style="border:1px solid #999; padding:4px; width:10%;">Qty</th>
+                <th style="border:1px solid #999; padding:4px; width:10%;">Unit</th>
+                <th style="border:1px solid #999; padding:4px; width:20%;">Price</th>
+                <th style="border:1px solid #999; padding:4px; width:20%;">Total</th>
             </tr>
-        @endforeach
+        </thead>
+            <tbody>
 
-        {{-- OLD PRODUCTS (DEDUCTION) --}}
-        @foreach($sale->oldProductPurchases as $purchase)
-            @foreach($purchase->details as $i)
+            {{-- NEW PRODUCTS --}}
+            @forelse($sale->details as $item)
                 @php
-                    $line = $i->qty * $i->price;
-                    $oldTotal += $line;
+                    $line = ($item->qty ?? 0) * ($item->price ?? 0);
+                    $newTotal += $line;
                 @endphp
                 <tr>
-                    <td>{{ $sl++ }}</td>
-                    <td>{{ $i->oldProduct->product_name ?? '' }}</td>
-                    <td>{{ $i->qty }}</td>
-                    <td>{{ $i->unit }}</td>
-                    <td class="text-right">{{ $title=='Bill Copy' ? number_format($i->price,2) : '' }}</td>
-                    <td class="text-right">{{ $title=='Bill Copy' ? '( - ) '.number_format($line,2) : '' }}</td>
+                    <td style="border:1px solid #999; padding:4px; text-align:center;">{{ $sl++ }}</td>
+                    <td style="border:1px solid #999; padding:4px; text-align:left;">{{ $item->product->product_name ?? 'N/A' }}</td>
+                    <td style="border:1px solid #999; padding:4px; text-align:right;">{{ number_format($item->qty, 2) }}</td>
+                    <td style="border:1px solid #999; padding:4px; text-align:center;">{{ $item->unit ?? 'PC' }}</td>
+                    <td style="border:1px solid #999; padding:4px; text-align:right;">{{ $isBill ? number_format($item->price, 2) : '-' }}</td>
+                    <td style="border:1px solid #999; padding:4px; text-align:right;">{{ $isBill ? number_format($line, 2) : '-' }}</td>
                 </tr>
-            @endforeach
-        @endforeach
+            @empty
+                <tr>
+                    <td colspan="6" style="border:1px solid #999; padding:4px; text-align:center;">No products found</td>
+                </tr>
+            @endforelse
 
-        {{-- TOTALS (ONLY BILL COPY) --}}
-        @if($title == 'Bill Copy')
+
+            {{-- OLD PRODUCTS --}}
+            @foreach($sale->oldProductPurchases as $purchase)
+            @foreach($purchase->details as $item)
+
             @php
-                $discount   = $sale->discount_amount ?? 0;
-                $netPayable = $newTotal - $oldTotal - $discount;
-                $due        = $netPayable - $paid;
+                $qty = $item->qty ?? 0;
+                $price = $item->price ?? 0;
+                $line = $qty * $price;
+                $oldTotal += $line;
             @endphp
 
-            @if($discount > 0)
             <tr>
-                <td colspan="5" align="right">Discount (-)</td>
-                <td class="text-right">( - ) {{ number_format($discount,2) }}</td>
-            </tr>
-            @endif
+                <td style="border:1px solid #999; padding:4px; text-align:center;">{{ $sl++ }}</td>
+                <td style="border:1px solid #999; padding:4px; text-align:left;">{{ $item->oldProduct->product_name ?? '' }} (Old)</td>
+                <td style="border:1px solid #999; padding:4px; text-align:right;">{{ $qty }}</td>
+                <td style="border:1px solid #999; padding:4px; text-align:center;">{{ $item->unit ?? 'KG' }}</td>
 
-            <tr>
-                <td colspan="5" align="right"><strong>Net Payable</strong></td>
-                <td class="text-right"><strong>{{ number_format($netPayable,2) }}</strong></td>
-            </tr>
+                <td style="border:1px solid #999; padding:4px; text-align:right;">
+                    {{ $isBill ? number_format($price, 2) : '-' }}
+                </td>
 
-            <tr>
-                <td colspan="5" align="right">Paid</td>
-                <td class="text-right" style="color:green;">{{ number_format($paid,2) }}</td>
+                <td style="border:1px solid #999; padding:4px; text-align:right;">
+                   (-) {{ $isBill ? number_format($line, 2) : '-' }}
+                </td>
             </tr>
 
-            @if($due > 0)
-            <tr>
-                <td colspan="5" align="right">Due</td>
-                <td class="text-right">{{ number_format($due,2) }}</td>
-            </tr>
-            @endif
-        @endif
+            @endforeach
+            @endforeach
 
-        </tbody>
-    </table>
+            {{-- TOTALS (ONLY BILL COPY) --}}
+            {{-- BILL SUMMARY --}}
+                @if($isBill)
+
+                @php
+                    $tax = $sale->tax_amount ?? 0;
+                    $shipping = $sale->shipping_amount ?? 0;
+                    $discount = $sale->discount_amount ?? 0;
+
+                    $netPayable =
+                        ($newTotal + $tax + $shipping)
+                        - ($oldTotal + $discount);
+
+                    // 👇 negative check flag
+                    $isNegative = $netPayable < 0;
+
+                    // safe value for calculation
+                    $netPayableAbs = abs($netPayable);
+
+                    $due = $isNegative ? 0 : max(0, $netPayable - $paid);
+                @endphp
+
+                @if($discount > 0)
+                    <tr>
+                        <td colspan="5" style="text-align:right;">Discount</td>
+                        <td style="text-align:right;">
+                        
+                           (-) {{ number_format($discount, 2) }}
+                        
+                        </td>
+                    </tr>
+                @endif
+                <tr>
+                    <td colspan="5" style="text-align:right;">Net Payable</td>
+                    <td style="text-align:right;">
+                    @if($netPayable < 0)
+                        <span style="color:red;">(-) {{ number_format(abs($netPayable), 2) }}</span>
+                    @else
+                        {{ number_format($netPayable, 2) }}
+                    @endif
+                </td>
+
+                </tr>
+
+                <tr>
+                    <td colspan="5" style="text-align:right;">Paid</td>
+                    <td style="text-align:right;">{{ number_format($paid, 2) }}</td>
+                </tr>
+                @if($due > 0)
+                <tr>
+                    <td colspan="5" style="text-align:right;">Due</td>
+                    <td style="text-align:right;">{{ number_format($due, 2) }}</td>
+                </tr>
+                @endif
+                @endif
+
+                </tbody>
+            </table>
 
     {{-- SIGNATURE --}}
-    <table width="100%" style="margin-top:20px; border:none;">
-        <tr>
-            <td width="50%" style="border:none; text-align:center; height:100px;">
-                <div style="margin-top:30px; border-top:1px solid #000; width:80%; margin:auto;"></div>
-                <p style="margin:3px 0; font-size:11px;">Customer Signature</p>
-            </td>
+    @php
+    $user = auth()->user();
+@endphp
 
-            <td width="50%" style="border:none; text-align:center;">
-                @if(auth()->check() && auth()->user()->signature)
-                    <img src="{{ public_path(auth()->user()->signature) }}"
+<table width="100%" style="margin-top:20px; border:none;">
+    <tr>
+        <td width="50%" style="border:none; text-align:center;">
+            <div style="margin-top:25px; border-top:1px solid #000; width:80%; margin:auto;"></div>
+            <p style="margin:3px 0; font-size:11px;">Customer Signature</p>
+        </td>
+
+        <td width="50%" style="border:none; text-align:center;">
+            @if($user && $user->signature)
+                @php
+                    $path = storage_path('app/public/'.$user->signature);
+                @endphp
+
+                @if(file_exists($path))
+                    <img src="file://{{ $path }}"
                          style="height:35px; display:block; margin:0 auto 3px auto;">
                 @endif
-                <div style="border-top:1px solid #000; width:80%; margin:auto;"></div>
-                <p style="margin:3px 0; font-size:11px;">Seller Signature</p>
-            </td>
-        </tr>
-    </table>
+            @endif
+
+            <div style="border-top:1px solid #000; width:80%; margin:auto;"></div>
+            <p style="margin:3px 0; font-size:11px;">Seller Signature</p>
+        </td>
+    </tr>
+</table>
 
 </div>

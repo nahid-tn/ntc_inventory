@@ -24,10 +24,8 @@
             <input type="hidden" name="supplier_id" id="supplier_id" value="{{ $supplier->id }}">
         </div>
         <div class="col-md-2"><button class="btn btn-primary w-100">Search</button></div>
-        <a href="{{ route('supplier.ledger.pdf',$supplier->id) }}?from={{ $from }}&to={{ $to }}"
-   class="btn btn-danger mb-3">
-   📄 Download PDF
-</a>
+        <div><a href="{{ route('supplier.ledger.pdf',$supplier->id) }}?from={{ $from }}&to={{ $to }}" class="btn btn-danger mb-3"> 📄 Download PDF </a></div>
+        {{-- <div><a href="{{ route('supplier.bank_statement.pdf',$supplier->id) }}?from={{ $from }}&to={{ $to }}" class="btn btn-danger mb-3"> 📄 Bank Statement PDF </a></div> --}}
     </div>
 </form>
 

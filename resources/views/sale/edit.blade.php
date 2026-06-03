@@ -37,7 +37,7 @@
                         </div>
                         <div class="form-group col-md-2">
                             <label>Sale Date</label> 
-                            <input type="date" name="sale_date" class="form-control" value="{{ $sale->sale_date->format('Y-m-d') }}" required>
+                            <input type="date" name="sale_date" class="form-control" value="{{ \Carbon\Carbon::parse($sale->sale_date)->format('Y-m-d') }}" required>
                         </div>
                     </div>
 
