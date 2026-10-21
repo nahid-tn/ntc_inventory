@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('company_name_bangla')->nullable();
             $table->string('company_nick_name_english')->nullable();
             $table->string('company_nick_name_bangla')->nullable();
-
+            $table->string('logo')->nullable();
             $table->string('email')->unique();
             $table->string('company_address_english')->nullable();
             $table->string('company_address_bangla')->nullable();

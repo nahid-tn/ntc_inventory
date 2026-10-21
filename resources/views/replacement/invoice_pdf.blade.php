@@ -98,7 +98,7 @@
         <td style="width:80%; border:none; text-align:center; vertical-align:middle;">
 
             <h1 style="margin:0; font-family:solaimanlipi;">
-                {{ $companyInfo->company_name_english ?? 'Nafis Trade Corporation' }}
+                {{ $companyInfo->company_name_english ?? 'নাফিস ট্রেড কর্পোরেশন' }}
             </h1>
 
             <p style="margin:2px 0;">

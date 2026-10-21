@@ -23,12 +23,12 @@
                         <tr>
                             <th>#</th>
                             <th>Product Name</th>
-                            <!-- <th>Category</th> -->
+                            {{-- <th>Category</th> --}}
                             <th>Stock Qty</th>
-                            <!-- <th>Buy Price</th>
+                            <th>Buy Price</th>
                             <th>Sale Price</th>
                             <th>Total Stock Value</th>
-                            <th>Action</th> -->
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -36,12 +36,12 @@
                         <tr>
                             <td>{{ $key + 1 }}</td>
                             <td>{{ $product->product_name ?? $product->name }}</td>
-                            <!-- <td>{{ $product->category->name ?? 'N/A' }}</td> -->
+                            {{-- <td>{{ $product->category->name ?? 'N/A' }}</td> --}}
                             <td>{{ $product->qty }} {{ $product->unit }}</td>
-                            <!-- <td>{{ number_format($product->buy_price,2) }}</td>
+                            <td>{{ number_format($product->buy_price,2) }}</td>
                             <td>{{ number_format($product->price,2) }}</td>
                             <td>{{ number_format($product->qty * $product->buy_price,2) }}</td>
-                            <td></td> -->
+                            <td></td>
                         </tr>
                         @endforeach
                         @if($products->isEmpty())

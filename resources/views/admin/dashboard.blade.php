@@ -26,7 +26,7 @@
 
                         <!-- Total Profit / Loss -->
                         <div class="col-md-3">
-                            <div class="card mb-3 {{ $totalProfit < 0 ? 'bg-danger text-white' : 'bg-success text-white' }}">
+                            <div class="card mb-3 {{ $totalProfit < 0 ? 'bg-primary text-white' : 'bg-success text-white' }}">
                                 <div class="card-body text-center">
                                     <h5>Total Stock</h5>
                                     <h2>{{ number_format(abs($totalProfit), 2) }}</h2>
@@ -36,7 +36,7 @@
 
                         <!-- Total Sale -->
                         <div class="col-md-3">
-                            <div class="card text-white bg-primary mb-3">
+                            <div class="card text-white bg-success mb-3">
                                 <div class="card-body text-center">
                                     <h5>Total Sale</h5>
                                     <h2>{{ number_format($totalSale, 2) }}</h2>
@@ -76,7 +76,7 @@
                         </div>
 
                         <div class="col-md-4">
-                            <div class="card mb-3 {{ $expenseTotal < 0 ? 'bg-danger text-white' : 'bg-light text-dark' }}">
+                            <div class="card mb-3 {{ $expenseTotal < 0 ? 'bg-danger text-white' : 'bg-danger text-white' }}">
                                 <div class="card-body text-center">
                                     <h5>Total Expense</h5>
                                     <h2>{{ $expenseTotal < 0 ? '-' : '' }}{{ number_format(abs($expenseTotal), 2) }}</h2>

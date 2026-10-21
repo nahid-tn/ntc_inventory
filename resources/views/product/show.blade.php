@@ -53,19 +53,24 @@
                 <div class="row">
 
                     {{-- Purchase Price --}}
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-4 mb-3">
                         <label>Purchase Price</label>
                         <input type="text" class="form-control" 
                                value="{{ number_format($product->purchase_price,2) }}" readonly>
                     </div>
+                    {{-- Wholesale Price --}}
+                    <div class="col-md-4 mb-3">
+                        <label>Wholesale Price</label>
+                        <input type="text" class="form-control" value="{{ number_format($product->wholesale_price,2) }}" readonly>
+                    </div>
 
                     {{-- Selling Price --}}
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-4 mb-3">
                         <label>Selling Price</label>
                         <input type="text" class="form-control" 
                                value="{{ number_format($product->selling_price,2) }}" readonly>
                     </div>
-                    <div class="col-md-12 mb-3">
+                    <div class="col-md-4 mb-3">
                         <label>Product Description</label>
                         <textarea class="form-control" rows="4" readonly>{{ $product->description }}</textarea>
                     </div>

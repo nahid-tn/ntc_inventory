@@ -12,20 +12,24 @@ class Product extends Model
 {
     protected $fillable = [
         'product_name',
+        'product_name_bn',
         'product_code',
         'model_name',
         'brand_id',
         'category_id',
         'purchase_price',
-        'selling_price', // টাইপো ফিক্স
+        'wholesale_price',
+        'selling_price',
         'description',
+        'image',
         'status',
+        'is_deleted',
         'stock',
     ];
 
-    // Laravel 12: টাইপ কাস্টিং - এটা ম্যান্ডেটরি
     protected $casts = [
         'purchase_price' => 'decimal:2',
+        'wholesale_price' => 'decimal:2',
         'selling_price' => 'decimal:2',
         'stock' => 'integer',
         'status' => 'boolean',
@@ -57,5 +61,29 @@ class Product extends Model
         return Attribute::make(
             get: fn () => app(BanglaHelper::class)->translate($this->product_name)
         );
+    }
+
+    /**
+     * Auto-generate product_code when creating
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($product) {
+            if (empty($product->product_code)) {
+                $lastProduct = static::latest('id')->first();
+                $nextId      = $lastProduct ? $lastProduct->id + 1 : 1;
+                $code        = 'PRD-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
+
+                // Duplicate check
+                while (static::where('product_code', $code)->exists()) {
+                    $nextId++;
+                    $code = 'PRD-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
+                }
+
+                $product->product_code = $code;
+            }
+        });
     }
 }

@@ -89,11 +89,11 @@
             <form action="{{ route('reports.profit_loss') }}" method="GET" class="filter-form">
                 <label>Start Date:</label>
                 <input type="date" name="start_date"
-                    value="{{ request('start_date', $startDate->format('Y-m-d')) }}">
+                    value="{{ $startDate->format('Y-m-d') }}">
 
                 <label>End Date:</label>
                 <input type="date" name="end_date"
-                    value="{{ request('end_date', $endDate->format('Y-m-d')) }}">
+                    value="{{ $endDate->format('Y-m-d') }}">
 
                 <button type="submit">Generate</button>
                 <a href="{{ route('reports.profit_loss_pdf', request()->all()) }}" 

@@ -38,7 +38,6 @@
 </head>
 
 <body>
-
 @php
     $company = $companyInfo ?? null;
 

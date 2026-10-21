@@ -35,6 +35,12 @@ class CustomerController extends Controller
     {
         return view('customer.create');
     }
+
+    public function NewCustomerForm()
+    {
+        return view('customer.addcreate');
+    }
+
     public function Create(Request $request)
     {
         $customers= new Customer();
@@ -45,6 +51,50 @@ class CustomerController extends Controller
         return redirect()->route('customer.index')
                  ->with('success', 'Customer added successfully!');
     }
+
+    public function store(Request $request)
+    {
+        $customer = new Customer();
+        $customer->customer_name = $request->customer_name;
+        $customer->mobile        = $request->mobile;
+        $customer->address       = $request->address;
+        $customer->save();
+
+        return response()->make("
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Saved</title>
+        </head>
+        <body>
+
+        <script>
+
+        if(window.opener){
+
+            // Parent Window-এর Customer Name
+            window.opener.document.getElementById('customer_search').value = '".addslashes($customer->customer_name)."';
+
+            // Hidden Customer ID
+            window.opener.document.getElementById('customer_id').value = '".$customer->id."';
+
+            // চাইলে Parent Page Refresh করতে পারেন
+            // window.opener.location.reload();
+
+        }
+
+        alert('Customer Added Successfully.');
+
+        window.close();
+
+        </script>
+
+        </body>
+        </html>
+        ");
+    }
+
+
     public function Edit($id)
     {
         $customers = Customer::findorfail($id);

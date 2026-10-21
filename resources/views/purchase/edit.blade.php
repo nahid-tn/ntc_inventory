@@ -57,7 +57,7 @@
                         <input type="hidden" name="products[{{ $index }}][product_id]" class="product_id" value="{{ $item->product_id }}">
                         <small class="text-muted stock_info"> @if($item->product) Stock: {{ $item->product->stock }} @endif </small>
                     </td>
-                    <td><input type="number" name="products[{{ $index }}][qty]" class="form-control qty" value="{{ $item->qty }}" min="1" step="0.01" required></td>
+                    <td><input type="number" name="products[{{ $index }}][qty]" class="form-control qty" value="{{ $item->qty }}" min="1" step="0.00001" required></td>
                     <td>
                         <select name="products[{{ $index }}][unit]"
                                 class="form-control unit" required>
@@ -70,7 +70,7 @@
                             @endforeach
                         </select>
                     </td>
-                    <td><input type="number" name="products[{{ $index }}][price]" class="form-control price" value="{{ $item->price }}" step="0.001" required></td>
+                    <td><input type="number" name="products[{{ $index }}][price]" class="form-control price" value="{{ $item->price }}" step="0.00001" required></td>
                     <td><input type="text" class="form-control row_total" value="{{ $item->total }}" readonly></td>
                     <td>
                         @if($index == 0)  
@@ -105,7 +105,7 @@
                 </div>
                 <div class="form-group col-md-4">
                     <label>Paid</label>
-                    <input type="number" class="form-control" id="paid_amount" name="paid_amount" value="{{ $paidAmount }}" step="0.01">
+                    <input type="number" class="form-control" id="paid_amount" name="paid_amount" value="{{ $paidAmount }}" step="0.00001">
                 </div>
                 <div class="form-group col-md-4">
                     <label>Due</label>
@@ -170,7 +170,7 @@ row.innerHTML = `
     <input type="hidden" name="products[${rowIndex}][product_id]" class="product_id">
     <small class="text-muted stock_info"></small>
     </td>
-    <td><input type="number" name="products[${rowIndex}][qty]" class="form-control qty" value="1" step="0.01"></td>
+    <td><input type="number" name="products[${rowIndex}][qty]" class="form-control qty" value="1" step="0.00001"></td>
     <td>
     <select name="products[${rowIndex}][unit]" class="form-control unit">
     <option value="">-- Select Unit --</option>
@@ -180,7 +180,7 @@ row.innerHTML = `
     </select>
 </td>
 
-    <td><input type="number" name="products[${rowIndex}][price]" class="form-control price" value="0" step="0.001"></td>
+    <td><input type="number" name="products[${rowIndex}][price]" class="form-control price" value="0" step="0.00001"></td>
     <td><input type="text" class="form-control row_total" readonly></td>
     <td><button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Remove</button></td>
 `;

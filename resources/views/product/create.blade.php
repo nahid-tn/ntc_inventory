@@ -12,7 +12,7 @@
                     @if(session('success'))
                         <p style="color:green">{{ session('success') }}</p>
                     @endif
-                    <form action="{{route('product.create')}}" method="post">
+                    <form action="{{ route('product.create') }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         <div class="row">
                             <!-- Product Name -->
@@ -23,6 +23,13 @@
                                         style="border:1px solid #ccc; display:none; background:#fff; position:absolute; z-index:1000; width:100%;">
                                     </div>
                             </div>
+                            {{-- <div class="col-md-6 mb-3">
+                                <label>Product Name (Bangla)</label>
+                                <input type="text" id="product_name_bn" name="product_name_bn" class="form-control uppercase">
+                                    <div id="suggestions"
+                                        style="border:1px solid #ccc; display:none; background:#fff; position:absolute; z-index:1000; width:100%;">
+                                    </div>
+                            </div> --}}
 
                             <!-- Product Code -->
                             <div class="col-md-6 mb-3">
@@ -49,12 +56,18 @@
 
                         <div class="row">
                             <!-- Purchase Price -->
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label for="purchase_price">Purchase Price</label>
                                 <input type="text" id="purchase_price" name="purchase_price" class="form-control" placeholder="Enter purchase price..." autocomplete="off">
                                 <small id="purchase-price-warning" class="text-danger" style="display:none"></small>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <!-- Wholesale Price -->
+                            <div class="col-md-4 mb-3">
+                                <label for="wholesale_price">Wholesale Price</label>
+                                <input type="text" id="wholesale_price" name="wholesale_price" class="form-control" placeholder="Enter wholesale price..." autocomplete="off">
+                                <small id="wholesale-price-warning" class="text-danger" style="display:none"></small>
+                            </div>
+                            <div class="col-md-4 mb-3">
                                 <label for="selling_price">Selling Price</label>
                                 <input type="text" id="selling_price" name="selling_price" class="form-control" placeholder="Enter selling price..." autocomplete="off">
                                 <small id="selling-price-warning" class="text-danger" style="display:none"></small>
@@ -66,6 +79,7 @@
                                 <textarea id="description" name="description" class="form-control" rows="4" placeholder="Enter product description..." style="resize: vertical;"></textarea>
                                 <small id="description-warning" class="text-danger" style="display:none"></small>
                             </div>
+                            <div class="col-md-6 mb-3"> <label class="form-label"> Product Image </label> <input type="file" name="image" id="image" class="form-control" accept="image/*"> <small class="text-muted"> JPG, PNG, JPEG, WEBP </small> </div> <div class="col-md-6 mb-3 text-center"> <label class="form-label d-block"> Preview </label> <img id="preview-image" src="{{ asset('images/no-image.png') }}" style=" width:200px; height:200px; border:1px solid #ddd; object-fit:cover; border-radius:10px; "> </div>
                         <div class="d-flex justify-content-end">
     <button type="submit" class="btn btn-primary me-2">Submit</button>
     <button type="button" class="btn btn-secondary" onclick="history.back()">
@@ -191,7 +205,19 @@
     let lastPart = words.length > 1 ? words[words.length - 1].toUpperCase() : '';
 
     document.getElementById('model_name').value = code + ' - ' + lastPart;
-});
+    });
+
+    document.getElementById('image').addEventListener('change', function(e){
+    const file = e.target.files[0];
+    if(file){
+        let reader = new FileReader();
+        reader.onload = function(event){
+            document.getElementById('preview-image')
+                    .src = event.target.result;
+        }
+        reader.readAsDataURL(file);
+    }
+    });
 
 </script>
 

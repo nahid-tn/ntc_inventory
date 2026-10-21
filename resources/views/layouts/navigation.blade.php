@@ -44,7 +44,7 @@
                 </div>
 
                 
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+               <div class="hidden space-x-12 sm:-my-px sm:ms-10 sm:flex">
                     
                 <div class="dropdown mt-3">
                         <button class="btn btn-warning dropdown-toggle"
@@ -79,6 +79,7 @@
                              <li><a class="dropdown-item" href="{{ route('replacement.index') }}">♻️ Sale Replacement</a></li>
                             <li><a class="dropdown-item" href="{{ route('oldsale.old_index') }}">🛍️ Old Product Index</a></li>
                             <li><a class="dropdown-item" href="{{ route('oldsale.index') }}">🛍️ Old Product Sale</a></li>
+                            <li><a class="dropdown-item" href="{{ route('old_product_exchange.index') }}">🔄 Old Product Exchange</a></li>
                             <li><a class="btn btn-info" href="{{ route('oldsale.profitlos_report') }}" >🚴 Profit / Loss Report</a></li>
                             <li><a class="dropdown-item" href="{{ route('ips.form') }}">⚡IPS Calculator</a></li>
                         </ul>
@@ -87,11 +88,9 @@
                             <button class="btn btn-warning dropdown-toggle"
                                     type="button"
                                     data-bs-toggle="dropdown"
-                                    aria-expanded="false">
-                                🌿 Accounts
+                                    aria-expanded="false">🌿 Accounts
                             </button>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{{ route('product.index') }}">🏷️ Products</a></li>
                                 <li> <a class="dropdown-item" href="{{ route('reports.due_reports') }}"> 📊 Customer Due Report</a> </li>
                                 <li><a class="dropdown-item" href="{{ route('reports.supplier_payment') }}">📊 Supplier Due Report</a></li>
                                 <li><a class="dropdown-item" href="{{ route('supplier.payment.index') }}">☰ Supplier Payments List</a></li>

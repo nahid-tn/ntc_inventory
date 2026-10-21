@@ -50,7 +50,7 @@
                 <th>Supplier</th>
                 <th>Paid Amount</th>
                 <th>Due After Pay</th>
-                <th width="180">Action</th>
+                <th>Action</th>
             </tr>
             </thead>
             <tbody>

@@ -4,15 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SalesReceived extends Model
 {
     use HasFactory;
 
-    // Table name (optional, Laravel auto-uses plural of model name)
     protected $table = 'sales_received';
 
-    // Fillable fields
     protected $fillable = [
         'customer_id',
         'sale_id',
@@ -20,28 +20,32 @@ class SalesReceived extends Model
         'received_method',
         'received_date',
         'tracking_no',
+        'payment_type',
     ];
 
-    // Dates (so Carbon can be used automatically)
-    protected $dates = [
-        'received_date',
-        'created_at',
-        'updated_at',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'received_date' => 'date',
+            'amount'        => 'decimal:2',
+        ];
+    }
 
-    /**
-     * Relationship with Sale
-     */
-    public function sale()
+    public function sale(): BelongsTo
     {
         return $this->belongsTo(Sales::class, 'sale_id');
     }
 
-    /**
-     * Relationship with Customer
-     */
-    public function customer()
+    public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_id');
+    }
+
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(
+            PaymentAllocation::class,
+            'sales_received_id'
+        );
     }
 }

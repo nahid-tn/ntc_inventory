@@ -249,11 +249,96 @@ class SupplierPaymentController extends Controller
     }
 
 
+    // public function show($id)
+    // {
+    //     $payment = SupplierPayment::with('supplier','purchase')->findOrFail($id);
+    //     return view('supplier_payment.show', compact('payment'));
+    // }
+
+    // public function show($id)
+    // {
+    //     $payment = SupplierPayment::with(['supplier', 'purchase'])->findOrFail($id);
+    //     $supplier = $payment->supplier;
+    //     $supplier_id = $supplier->id;
+
+    //     // ====== Ledger এর মতো একই ফর্মুলা ======
+    //     $totalPurchase = \App\Models\Purchase::where('supplier_id', $supplier_id)
+    //                         ->sum('subtotal');
+
+    //     $totalPaid = \App\Models\SupplierPayment::where('supplier_id', $supplier_id)
+    //                         ->sum('amount');
+
+    //     $totalReturn = \App\Models\PurchaseReturn::where('supplier_id', $supplier_id)
+    //                         ->sum('total_amount');
+
+    //     $totalPaidWithReturn = $totalPaid + $totalReturn;
+
+    //     $balance = $totalPurchase - $totalPaid - $totalReturn;   // বর্তমান মোট বাকি
+
+    //     // ====== এই Invoice এর আলাদা Due ======
+    //     $invoiceDue = null;
+    //     if ($payment->purchase) {
+    //         $invoicePaid = \App\Models\SupplierPayment::where('purchase_id', $payment->purchase_id)
+    //                             ->sum('amount');
+
+    //         // যদি PurchaseReturn এ purchase_id থাকে
+    //         $invoiceReturn = \App\Models\PurchaseReturn::where('purchase_id', $payment->purchase_id)
+    //                             ->sum('total_amount');
+
+    //         $invoiceDue = $payment->purchase->subtotal - $invoicePaid - $invoiceReturn;
+    //     }
+
+    //     return view('supplier_payment.show', compact(
+    //         'payment',
+    //         'totalPurchase',
+    //         'totalPaid',
+    //         'totalReturn',
+    //         'totalPaidWithReturn',
+    //         'balance',
+    //         'invoiceDue'
+    //     ));
+    // }
+
     public function show($id)
-    {
-        $payment = SupplierPayment::with('supplier','purchase')->findOrFail($id);
-        return view('supplier_payment.show', compact('payment'));
+{
+    $payment = SupplierPayment::with(['supplier', 'purchase'])->findOrFail($id);
+    $supplier = $payment->supplier;
+    $supplier_id = $supplier->id;
+
+    // ====== Ledger এর মতো একই ফর্মুলা ======
+    $totalPurchase = \App\Models\Purchase::where('supplier_id', $supplier_id)
+                        ->sum('subtotal');
+
+    $totalPaid = \App\Models\SupplierPayment::where('supplier_id', $supplier_id)
+                        ->sum('amount');
+
+    $totalReturn = \App\Models\PurchaseReturn::where('supplier_id', $supplier_id)
+                        ->sum('total_amount');
+
+    $totalPaidWithReturn = $totalPaid + $totalReturn;
+
+    $balance = $totalPurchase - $totalPaid - $totalReturn;
+
+    // ====== এই Invoice এর আলাদা Due ======
+    $invoiceDue = null;
+    if ($payment->purchase) {
+        $invoicePaid = \App\Models\SupplierPayment::where('purchase_id', $payment->purchase_id)
+                            ->sum('amount');
+
+        // ⚠️ purchase_returns এ purchase_id নেই, তাই invoice-level return বাদ
+        $invoiceDue = $payment->purchase->subtotal - $invoicePaid;
     }
+
+    return view('supplier_payment.show', compact(
+        'payment',
+        'totalPurchase',
+        'totalPaid',
+        'totalReturn',
+        'totalPaidWithReturn',
+        'balance',
+        'invoiceDue'
+    ));
+}
 
     // Edit Payment
     public function edit($id)
@@ -357,15 +442,7 @@ class SupplierPaymentController extends Controller
 
         return back()->with('success','Payment Deleted Successfully');
     }
-    // public function supplierInvoices($id)
-    // {
-    //     $purchases = Purchase::where('supplier_id', $id)
-    //         ->where('due_amount', '>', 0)
-    //         ->orderBy('date', 'asc')  // <-- Date অনুযায়ী ascending
-    //         ->get(['id', 'Invoice_no', 'due_amount', 'date']);
 
-    //     return response()->json($purchases);
-    // }
         public function supplierInvoices($id)
         {
 

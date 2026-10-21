@@ -18,6 +18,7 @@
         body {
             font-family: DejaVu Sans;
             font-size: 12px;
+            
             color: #333;
         }
 
@@ -63,12 +64,12 @@
         }
         .footer{
             position:fixed;
-            bottom:0mm;
             left:0;
             right:0;
             text-align:center;
-            font-size:9px;
-            color:#666;
+            line-height:1;
+            font-size:11px;
+            color:#123602;
         }
     </style>
 </head>
@@ -87,26 +88,25 @@
     </div>
 </div>
 
-<div style="width: 100%; display: flex; justify-content: space-between; margin-bottom: 10px;">
-    <h4 style="text-align:center; margin:3px 0;">Purchase Order</h4>
-    <hr>
-    <!-- Left Side -->
-    <div style="width: 70%; float: left;">
-        
-        <p style="text-align:left; font-size:12px;">
-            <b>Supplier:</b> {{ $purchaseOrder->supplier->supplier_name ?? '' }}<br>
-            <b>Mobile:</b> {{ $purchaseOrder->supplier->mobile ?? '' }}<br>
-            <b>Address:</b> {{ $purchaseOrder->supplier->address ?? '' }}<br>
-        </p>
-    </div>
+<table style="width:100%; border:none; margin-bottom:10px;">
+    <tr>
+        <td style="width:70%; vertical-align:top; text-align:left; border:none;">
+            <p style="font-size:12px; margin:0;">
+                <b>Supplier:</b> {{ $purchaseOrder->supplier->supplier_name ?? '' }}<br>
+                <b>Mobile:</b> {{ $purchaseOrder->supplier->mobile ?? '' }}<br>
+                <b>Address:</b> {{ $purchaseOrder->supplier->address ?? '' }}
+            </p>
+        </td>
 
-    <!-- Right Side -->
-    <div style="width: 30%; float: right; text-align: left; font-size: 12px; margin-top: 10px;">
-        <b>PO Number:</b> {{ $purchaseOrder->po_number }}<br>
-        <b>Order Date:</b> {{ $purchaseOrder->order_date }}<br>
-        <b>Expected Date:</b> {{ $purchaseOrder->expected_date ?? '-' }}
-    </div>
-</div>
+        <td style="width:30%; vertical-align:top; text-align:left; border:none;">
+            <p style="font-size:12px; margin:0;">
+                <b>PO Number:</b> {{ $purchaseOrder->po_number }}<br>
+                <b>Order Date:</b> {{ $purchaseOrder->order_date }}<br>
+                <b>Expected Date:</b> {{ $purchaseOrder->expected_date ?? '-' }}
+            </p>
+        </td>
+    </tr>
+</table>
 
 <div style="clear: both;"></div>
 <hr>
@@ -133,8 +133,8 @@
             <td class="text-left">
                 {{ $item->product->product_name ?? '' }}
             </td>
-            <td>{{ $item->qty }}</td>
-            <td>{{ $item->unit }}</td>
+            <td style="text-align: right">{{ number_format($item->qty, 2) }}</td>
+            <td style="text-align: center">{{ $item->unit }}</td>
             <!-- <td>{{ number_format($item->price, 2) }}</td>
             <td>{{ number_format($item->total, 2) }}</td> -->
             <td></td>
@@ -184,11 +184,16 @@
     @endif
 
 </table>
-
+<div style="height:40px;"></div>
+<hr>
 <!-- Footer -->
 <div class="footer">
-    Page <span class="page-number"></span>
-    | Generated : {{ now()->format('d-m-Y H:i') }}
+    <p style="margin:15px 0 0;">
+        This is a system-generated report & does not require a signature or company seal.
+    </p>
+    <p style="margin:3px 0 0;">
+        Generated : {{ \Carbon\Carbon::now('Asia/Dhaka')->format('d-m-Y | h:i A') }}
+    </p>
 </div>
 
 </body>

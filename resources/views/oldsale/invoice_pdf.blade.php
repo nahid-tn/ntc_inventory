@@ -6,7 +6,7 @@
 
 <style>
     body {
-        font-family: dejavusans, sans-serif;
+        font-family: solaimanlipi, sans-serif;
         font-size: 12px;
     }
 
@@ -20,6 +20,7 @@
     }
 
     h2, h3 {
+        font-family: solaimanlipi, sans-serif;
         text-align: center;
         margin: 5px 0;
     }
@@ -38,9 +39,6 @@
         padding: 5px;
     }
 
-    th {
-        background: #f2f2f2;
-    }
 
     .text-right {
         text-align: right;
@@ -51,7 +49,7 @@
     }
 
     .signature {
-        margin-top: 30px;
+        margin-top: 70px;
         text-align: center;
         width: 40%;
         border-top: 1px solid #000;
@@ -71,9 +69,42 @@
 <div class="container">
 
     <!-- ================= CHALLAN (NO MONEY) ================= -->
+    @php
+    $logo = public_path('images/logo.png');
+@endphp
+
+<table style="border:none; margin-bottom:10px; width:100%;">
+<tr>
+
+    {{-- LOGO --}}
+    <td style="width:10%; border:none; vertical-align:middle; text-align:left;">
+        @if(file_exists($logo))
+            <img src="file://{{ $logo }}"
+                 style="width:80px; height:50px; display:block;">
+        @endif
+    </td>
+
+    {{-- COMPANY --}}
+    <td style="width:80%; border:none; text-align:center; vertical-align:middle;">
+        <p style="font-size: 24"px>
+            {{ $companyInfo->company_name_bangla ?? 'Company Name' }}
+        </p>
+
+        <p>
+            {{ $companyInfo->company_address_bangla ?? '' }} <br>
+            মোবাইল: {{ $companyInfo->company_phone_bangla ?? '' }}
+        </p>
+
+        <hr>
+    </td>
+
+    <td style="width:10%; border:none;"></td>
+
+</tr>
+</table>
     <div class="box">
 
-        <h2>DELIVERY CHALLAN</h2>
+        <div style="font-size: 24px; text-decoration: underline; text-align: center;"> {{ $invoice->challan_bn }}</div>
 
         <strong>Invoice No:</strong> {{ $sale->invoice_no }}<br>
         <strong>Customer:</strong> {{ $sale->customer->customer_name ?? '-' }}<br>
@@ -111,11 +142,45 @@
 
     </div>
 
+    <hr>
+@php
+    $logo = public_path('images/logo.png');
+@endphp
+
+<table style="border:none; margin-bottom:10px; width:100%;">
+<tr>
+
+    {{-- LOGO --}}
+    <td style="width:10%; border:none; vertical-align:middle; text-align:left;">
+        @if(file_exists($logo))
+            <img src="file://{{ $logo }}"
+                 style="width:80px; height:50px; display:block;">
+        @endif
+    </td>
+
+    {{-- COMPANY --}}
+    <td style="width:80%; border:none; text-align:center; vertical-align:middle;">
+        <p style="font-size: 24"px>
+            {{ $companyInfo->company_name_bangla ?? 'Company Name' }}
+        </p>
+
+        <p>
+            {{ $companyInfo->company_address_bangla ?? '' }} <br>
+            মোবাইল: {{ $companyInfo->company_phone_bangla ?? '' }}
+        </p>
+
+        <hr>
+    </td>
+
+    <td style="width:10%; border:none;"></td>
+
+</tr>
+</table>
+
     <!-- ================= INVOICE (WITH MONEY) ================= -->
-    <div class="box page-break">
-
-        <h2>INVOICE</h2>
-
+    <div class="box">
+        
+        <div style="font-size: 24px; text-decoration: underline; text-align: center;">{{ $invoice->bill_bn }}</div>
         <strong>Invoice No:</strong> {{ $sale->invoice_no }}<br>
         <strong>Customer:</strong> {{ $sale->customer->customer_name ?? '-' }}<br>
         <strong>Address:</strong> {{ $sale->customer->address ?? '-' }}<br>
@@ -147,17 +212,14 @@
                     <td class="text-right">{{ number_format($d->subtotal,2) }}</td>
                 </tr>
                 @endforeach
-
                 <tr>
                     <th colspan="5" class="text-right">Subtotal</th>
                     <th class="text-right">{{ number_format($sale->subtotal,2) }}</th>
                 </tr>
-
                 <tr>
                     <th colspan="5" class="text-right">Paid</th>
                     <th class="text-right">{{ number_format($sale->paid_amount,2) }}</th>
                 </tr>
-
                 <tr>
                     <th colspan="5" class="text-right">Due</th>
                     <th class="text-right">{{ number_format($sale->due_amount,2) }}</th>

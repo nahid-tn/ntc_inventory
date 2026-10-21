@@ -14,6 +14,7 @@ return new class extends Migration
             $table->date('received_date');
             $table->decimal('amount', 12, 2);
             $table->string('received_method')->nullable();
+            $table->string('payment_type')->default('partial');
             $table->string('tracking_no')->nullable();
             $table->timestamps();
         });

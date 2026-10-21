@@ -1,0 +1,22 @@
+[x-cloak] {
+    display: none !important;
+}
+
+.navbar .dropdown-menu {
+    min-width: 230px;
+}
+
+.navbar .dropdown-item {
+    white-space: normal;
+}
+
+.dropdown-menu .dropdown-item:hover {
+    background-color: #fff3cd;
+    color: #664d03;
+}
+
+@media (min-width: 1024px) {
+    nav .dropdown-menu {
+        margin-top: 0.4rem !important;
+    }
+}

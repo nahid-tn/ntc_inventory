@@ -26,8 +26,10 @@ return new class extends Migration
         $table->decimal('due_amount', 12,2)->nullable();
         $table->string('payment_method')->nullable();
         $table->string('received_type')->nullable();
-        $table->string('ref_no')->nullable();
+        $table->string('note')->nullable();
         $table->date('body_date')->nullable();
+        $table->string('warranty_period')->nullable();
+        $table->string('status')->default('pending');
         $table->timestamps();
     });
     }

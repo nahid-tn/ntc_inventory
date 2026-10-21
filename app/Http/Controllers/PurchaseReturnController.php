@@ -62,97 +62,209 @@ class PurchaseReturnController extends Controller
     /**
      * Store Return + Reduce Stock
      */
+    // public function store(Request $request)
+    // {
+    //     $request->validate([
+    //         'invoice_no' => 'required|string|max:255',
+    //         'return_date' => 'required|date',
+    //         'supplier_id' => 'nullable|integer|exists:suppliers,id',
+    //         'note' => 'nullable|string',
+    //         'products' => 'required|array|min:1',
+    //         'products.*.product_id' => 'required|integer|exists:products,id',
+    //         'products.*.qty'   => 'required|decimal:0,2|min:1',
+    //         'products.*.unit' => 'nullable|string|max:50',
+    //         'products.*.price' => 'required|decimal:0,2|min:0',
+    //         'products.*.reason' => 'nullable|string',
+    //     ]);
+
+    //     DB::beginTransaction();
+
+    //     try {
+    //         $grandTotal = 0;
+    //         foreach ($request->products as $item) {
+    //             $grandTotal += ($item['qty'] * $item['price']);
+    //         }
+    //         /**
+    //          * Main Return Entry
+    //          */
+    //         $purchaseReturn = PurchaseReturn::create([
+    //             'invoice_no' => $request->invoice_no,
+    //             'return_date' => $request->return_date,
+    //             'total_amount' => $grandTotal,
+    //             'note' => $request->note,
+    //             'supplier_id' => $request->supplier_id,
+    //         ]);
+
+    //         /**
+    //          * Return Items + Stock Minus
+    //          */
+    //         foreach ($request->products as $item) {
+    //             $product = Product::findOrFail($item['product_id']);
+    //             /**
+    //              * Safety Check
+    //              * বেশি return দিলে error দিবে
+    //              */
+    //             if ($item['qty'] > $product->stock) {
+    //                 throw new \Exception(
+    //                     "Insufficient stock for product: " . $product->product_name
+    //                 );
+    //             }
+    //             $total = $item['qty'] * $item['price'];
+    //             PurchaseReturnItem::create([
+    //                 'purchase_return_id' => $purchaseReturn->id,
+    //                 'product_id' => $item['product_id'],
+    //                 'qty' => $item['qty'],
+    //                 'unit' => $item['unit'] ?? null,
+    //                 'price' => $item['price'],
+    //                 'total' => $total,
+    //                 'reason' => $item['reason'] ?? null,
+    //             ]);
+
+    //             /**
+    //              * IMPORTANT:
+    //              * Return হলে stock কমবে
+    //              */
+    //             $product->decrement('stock', $item['qty']);
+    //             /**
+    //              * Auto status update
+    //              */
+    //             $product->status = $product->stock <= 5
+    //                 ? 'Low Stock'
+    //                 : 'In Stock';
+    //             $product->save();
+    //         }
+
+    //         DB::commit();
+
+    //         return redirect()
+    //             ->route('purchase-return.index')
+    //             ->with('success', 'Purchase Return Created Successfully & Stock Reduced!');
+    //     } catch (\Exception $e) {
+
+    //         DB::rollBack();
+
+    //         return redirect()
+    //             ->back()
+    //             ->withInput()
+    //             ->withErrors($e->getMessage());
+    //     }
+    // }
     public function store(Request $request)
     {
         $request->validate([
             'invoice_no' => 'required|string|max:255',
             'return_date' => 'required|date',
+            'transport_cost' => 'nullable|numeric|min:0',
+
+            // ✅ FIXED: Image + PDF both allowed
+            'transport_receive' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
+
             'supplier_id' => 'nullable|integer|exists:suppliers,id',
             'note' => 'nullable|string',
+
             'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|integer|exists:products,id',
-            'products.*.qty'   => 'required|decimal:0,2|min:1',
+            'products.*.qty' => 'required|numeric|min:1',
             'products.*.unit' => 'nullable|string|max:50',
-            'products.*.price' => 'required|decimal:0,2|min:0',
+            'products.*.price' => 'required|numeric|min:0',
             'products.*.reason' => 'nullable|string',
         ]);
 
         DB::beginTransaction();
 
         try {
-            $grandTotal = 0;
-            foreach ($request->products as $item) {
-                $grandTotal += ($item['qty'] * $item['price']);
-            }
+
+            $grandTotal = collect($request->products)
+                ->sum(fn($item) => $item['qty'] * $item['price']);
+
             /**
-             * Main Return Entry
+             * =========================
+             * FILE UPLOAD (SAFE VERSION)
+             * =========================
+             */
+            $filePath = null;
+
+            if ($request->hasFile('transport_receive')) {
+
+                $file = $request->file('transport_receive');
+
+                // folder ensure
+                $folder = public_path('uploads/transport_receive');
+                if (!file_exists($folder)) {
+                    mkdir($folder, 0777, true);
+                }
+
+                $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+
+                $file->move($folder, $fileName);
+
+                $filePath = 'uploads/transport_receive/' . $fileName;
+            }
+
+            /**
+             * =========================
+             * MAIN RETURN CREATE
+             * =========================
              */
             $purchaseReturn = PurchaseReturn::create([
-                'invoice_no' => $request->invoice_no,
-                'return_date' => $request->return_date,
-                'total_amount' => $grandTotal,
-                'note' => $request->note,
-                'supplier_id' => $request->supplier_id,
+                'invoice_no'        => $request->invoice_no,
+                'return_date'       => $request->return_date,
+                'total_amount'      => $grandTotal,
+                'note'              => $request->note,
+                'supplier_id'       => $request->supplier_id,
+                'transport_cost'    => $request->transport_cost,
+                'transport_receive' => $filePath,
             ]);
 
             /**
-             * Return Items + Stock Minus
+             * =========================
+             * ITEMS + STOCK UPDATE
+             * =========================
              */
             foreach ($request->products as $item) {
+
                 $product = Product::findOrFail($item['product_id']);
-                /**
-                 * Safety Check
-                 * বেশি return দিলে error দিবে
-                 */
+
                 if ($item['qty'] > $product->stock) {
-                    throw new \Exception(
-                        "Insufficient stock for product: " . $product->product_name
-                    );
+                    throw new \Exception("Insufficient stock: " . $product->product_name);
                 }
+
                 $total = $item['qty'] * $item['price'];
+
                 PurchaseReturnItem::create([
                     'purchase_return_id' => $purchaseReturn->id,
-                    'product_id' => $item['product_id'],
-                    'qty' => $item['qty'],
-                    'unit' => $item['unit'] ?? null,
-                    'price' => $item['price'],
-                    'total' => $total,
-                    'reason' => $item['reason'] ?? null,
+                    'product_id'         => $item['product_id'],
+                    'qty'                => $item['qty'],
+                    'unit'               => $item['unit'] ?? null,
+                    'price'              => $item['price'],
+                    'total'              => $total,
+                    'reason'             => $item['reason'] ?? null,
                 ]);
 
-                /**
-                 * IMPORTANT:
-                 * Return হলে stock কমবে
-                 */
                 $product->decrement('stock', $item['qty']);
-                /**
-                 * Auto status update
-                 */
-                $product->status = $product->stock <= 5
-                    ? 'Low Stock'
-                    : 'In Stock';
-                $product->save();
+
+                $product->update([
+                    'status' => $product->stock <= 5 ? 'Low Stock' : 'In Stock'
+                ]);
             }
 
             DB::commit();
 
             return redirect()
                 ->route('purchase-return.index')
-                ->with('success', 'Purchase Return Created Successfully & Stock Reduced!');
+                ->with('success', 'Purchase Return Created Successfully');
+
         } catch (\Exception $e) {
 
             DB::rollBack();
 
-            return redirect()
-                ->back()
+            return back()
                 ->withInput()
                 ->withErrors($e->getMessage());
         }
     }
 
-    /**
-     * View Return Details
-     */
+
     public function show($id)
     {
         $purchaseReturn = PurchaseReturn::with('items.product')
@@ -166,9 +278,7 @@ class PurchaseReturnController extends Controller
     {
         $purchaseReturn = PurchaseReturn::with('items.product')
             ->findOrFail($id);
-
         $products = Product::orderBy('product_name', 'asc')->get();
-
         return view('purchase_returns.edit', compact(
             'purchaseReturn',
             'products'
@@ -182,6 +292,9 @@ class PurchaseReturnController extends Controller
         'return_date' => 'required|date',
         'supplier_id' => 'nullable|integer|exists:suppliers,id',
         'note' => 'nullable|string',
+        'transport_cost' => 'nullable|numeric|min:0',
+
+        'transport_receive' => 'nullable|file|mimetypes:image/jpeg,image/png,image/webp,application/pdf|max:5120',
 
         'items' => 'required|array|min:1',
         'items.*.product_id' => 'required|integer|exists:products,id',
@@ -195,58 +308,73 @@ class PurchaseReturnController extends Controller
 
         $return = PurchaseReturn::findOrFail($id);
 
+        // ================= FILE UPLOAD ONLY ONCE =================
+        $filePath = $return->transport_receive;
+
+        if ($request->hasFile('transport_receive')) {
+
+            $file = $request->file('transport_receive');
+
+            $folder = public_path('uploads/transport_receive');
+
+            if (!file_exists($folder)) {
+                mkdir($folder, 0777, true);
+            }
+
+            $fileName = time().'_'.uniqid().'.'.$file->getClientOriginalExtension();
+
+            $file->move($folder, $fileName);
+
+            $filePath = 'uploads/transport_receive/'.$fileName;
+        }
+
+        // ================= UPDATE MAIN =================
         $return->update([
-            'invoice_no'   => $request->invoice_no,
-            'return_date'  => $request->return_date,
-            'supplier_id'  => $request->supplier_id,
-            'note'         => $request->note ?? null,
-            'total_amount' => 0,
+            'invoice_no' => $request->invoice_no,
+            'return_date' => $request->return_date,
+            'supplier_id' => $request->supplier_id,
+            'note' => $request->note,
+            'transport_cost' => $request->transport_cost ?? 0,
+            'transport_receive' => $filePath,
         ]);
 
-        // old items delete
+        // ================= DELETE OLD ITEMS =================
         $return->items()->delete();
 
         $totalAmount = 0;
 
-        foreach ($request->items as $product) {
+        foreach ($request->items as $item) {
 
-            $total = $product['qty'] * $product['price'];
+            $total = $item['qty'] * $item['price'];
+            $totalAmount += $total;
 
             $return->items()->create([
-                'product_id' => $product['product_id'],
-                'qty'        => $product['qty'],
-                'unit'       => $product['unit'],
-                'price'      => $product['price'],
-                'total'      => $total,
-                'reason'     => $product['reason'] ?? null,
+                'product_id' => $item['product_id'],
+                'qty' => $item['qty'],
+                'unit' => $item['unit'] ?? null,
+                'price' => $item['price'],
+                'total' => $total,
+                'reason' => $item['reason'] ?? null,
             ]);
-
-            $totalAmount += $total;
         }
 
+        // ================= FINAL TOTAL =================
         $return->update([
             'total_amount' => $totalAmount
         ]);
     });
 
-    return redirect()
-        ->route('purchase-return.index')
+    return redirect()->route('purchase-return.index')
         ->with('success', 'Purchase return updated successfully!');
 }
-    /**
-     * Delete Return
-     * delete করলে stock আবার add হবে
-     */
+
+
     public function destroy($id)
     {
         DB::beginTransaction();
-
         try {
             $purchaseReturn = PurchaseReturn::with('items.product')
                 ->findOrFail($id);
-            /**
-             * Stock Restore
-             */
             foreach ($purchaseReturn->items as $item) {
                 $product = Product::find($item->product_id);
                 if ($product) {
@@ -258,13 +386,7 @@ class PurchaseReturnController extends Controller
                 }
             }
 
-            /**
-             * Delete items first
-             */
             $purchaseReturn->items()->delete();
-            /**
-             * Delete main row
-             */
             $purchaseReturn->delete();
             DB::commit();
             return redirect()
@@ -277,11 +399,11 @@ class PurchaseReturnController extends Controller
                 ->withErrors($e->getMessage());
         }
     }
+
+
     public function reportForm(Request $request)
     {
         $suppliers = Supplier::all();
-
-        // ✅ শুধু যেসব product return এ আছে
         $products = Product::whereIn('id', function ($q) {
             $q->select('product_id')
             ->from('purchase_return_items'); // তোমার item table
@@ -325,77 +447,37 @@ class PurchaseReturnController extends Controller
         return view('purchase_returns.report',compact('returns'));
     }
 
-    // public function exportPdf($id)
-    // {
-    //     // Fetch Purchase Return with relationships
-    //     $return = PurchaseReturn::with(['items.product', 'supplier'])
-    //                 ->findOrFail($id);
-
-    //     // Format values for file name
-    //     $date = \Carbon\Carbon::parse($return->return_date)->format('d-m-Y');
-    //     $invoiceNo = $return->return_no ?? 'NoInv';
-    //     $supplierName = $return->supplier->supplier_name ?? 'NoSupplier';
-    //     $supplierName = str_replace(' ', '_', $supplierName); // File safe
-
-    //     // Final PDF file name
-    //     $filename = $date . '-' . $invoiceNo . '-' . $supplierName . '.pdf';
-
-    //     // Generate PDF
-    //     $pdf = PDF::loadView('purchase_returns.pdf', compact('return'));
-    //     $pdf->setPaper('A4', 'portrait');
-
-    //     // Download
-    //     return $pdf->download($filename);
-    // }
+    
     public function exportPdf($id)
     {
-        // =====================
-        // LOAD DATA
-        // =====================
         $return = PurchaseReturn::with([
             'items.product',
             'supplier',
         ])->findOrFail($id);
 
         $companyInfo = CompanyInfo::first();
-
-        // =====================
-        // FILE NAME
-        // =====================
         $date = Carbon::parse($return->return_date)->format('d-m-Y');
         $invoiceNo = $return->return_no ?? 'NoInv';
         $supplierName = str_replace(' ', '_', $return->supplier->supplier_name ?? 'NoSupplier');
-
         $filename = $date . '-' . $invoiceNo . '-' . $supplierName . '.pdf';
 
-        // =====================
-        // CALCULATION
-        // =====================
         $returns = collect([$return]);
         $overallTotal = $return->items->sum('total') ?? 0;
 
         $supplier = $return->supplier ?? null;
         $from_date = $date;
         $to_date = $date;
-
-        // =====================
-        // BARCODE (Invoice + Supplier + Company)
-        // =====================
         $generator = new BarcodeGeneratorPNG();
 
         $companyName = $companyInfo->company_name_bangla ?? 'COMPANY';
         $supplierNameRaw = $return->supplier->supplier_name ?? 'SUPPLIER';
         $invoiceRaw = $return->return_no ?? 'INV';
-
         $barcodeText = $companyName . '|' . $supplierNameRaw . '|' . $invoiceRaw;
 
         $barcode = base64_encode(
             $generator->getBarcode($barcodeText, $generator::TYPE_CODE_128)
         );
 
-        // =====================
-        // VIEW
-        // =====================
         $html = view('purchase_returns.report_pdf', compact(
             'return',
             'returns',
@@ -407,22 +489,16 @@ class PurchaseReturnController extends Controller
             'barcode'
         ))->render();
 
-        // =====================
-        // FONT CONFIG (BANGLA FIX)
-        // =====================
         $defaultConfig = (new ConfigVariables())->getDefaults();
         $fontDirs = $defaultConfig['fontDir'];
-
         $defaultFontConfig = (new FontVariables())->getDefaults();
         $fontData = $defaultFontConfig['fontdata'];
 
         $mpdf = new Mpdf([
             'mode' => 'utf-8',
             'format' => 'A4',
-
             'autoScriptToLang' => true,
             'autoLangToFont' => true,
-
             'fontDir' => array_merge($fontDirs, [
                 public_path('fonts')
             ]),
@@ -434,7 +510,6 @@ class PurchaseReturnController extends Controller
             ],
 
             'default_font' => 'solaimanlipi',
-
             'margin_left' => 10,
             'margin_right' => 10,
             'margin_top' => 10,
@@ -442,9 +517,7 @@ class PurchaseReturnController extends Controller
         ]);
 
         $mpdf->SetAutoPageBreak(true, 15);
-
         $mpdf->WriteHTML($html);
-
         return $mpdf->Output($filename, 'D');
     }
     public function generate(Request $request)
@@ -454,56 +527,46 @@ class PurchaseReturnController extends Controller
             'to_date'   => 'required|date',
         ]);
 
-        // Query with relationships
         $query = PurchaseReturn::with(['items.product', 'supplier'])
             ->whereBetween('return_date', [
                 $request->from_date,
                 $request->to_date
             ]);
 
-        // Filter by supplier
         if ($request->supplier_id) {
             $query->where('supplier_id', $request->supplier_id);
         }
 
-        // Filter by product
         if ($request->product_id) {
             $query->whereHas('items', function ($q) use ($request) {
                 $q->where('product_id', $request->product_id);
             });
         }
 
-        // Get data
         $returns = $query->get();
 
-        // Calculate overall total
         $overallTotal = 0;
         foreach ($returns as $r) {
             $overallTotal += $r->items->sum('total');
         }
 
-        // Supplier name for header
         $supplier_name = 'All';
         if ($request->supplier_id) {
             $supplier = Supplier::find($request->supplier_id);
             $supplier_name = $supplier->supplier_name ?? 'All';
         }
 
-        // Generate file name based on first record
         if ($returns->count()) {
             $first = $returns->first();
-
             $date = \Carbon\Carbon::parse($first->return_date)->format('d-m-Y');
             $invoiceNo = $first->return_no ?? 'NoInv';
             $supplierName = $first->supplier->supplier_name ?? 'NoSupplier';
             $supplierName = str_replace(' ', '_', $supplierName); // File safe
-
             $filename = $date . '-' . $invoiceNo . '-' . $supplierName . '.pdf';
         } else {
             $filename = 'Purchase_Return_NoData.pdf';
         }
 
-        // Generate PDF
         $pdf = \PDF::loadView('purchase_returns.report_pdf', [
             'returns'      => $returns,
             'from_date'    => $request->from_date,
@@ -515,11 +578,8 @@ class PurchaseReturnController extends Controller
         ]);
 
         $pdf->setPaper('A4', 'portrait');
-
         return $pdf->download($filename);
     }
-
-    
 
     public function purchaseSearch(Request $request)
     {

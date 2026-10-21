@@ -59,12 +59,12 @@
                                     @forelse($customer->sales as $sale)
                                     <tr class="text-center">
                                         <td class="border border-gray-300 px-2 py-1">{{ $sale->invoice_no }}</td>
-                                        <td class="border border-gray-300 px-2 py-1">{{ $sale->sale_date->format('d-m-Y') }}</td>
+                                        <td class="border border-gray-300 px-2 py-1">{{ \Carbon\Carbon::parse($sale->sale_date)->format('d-m-Y') }}</td>
                                         <td class="border border-gray-300 px-2 py-1">{{ number_format($sale->subtotal,2) }}</td>
                                         <td class="border border-gray-300 px-2 py-1">{{ number_format($sale->tax_amount,2) }}</td>
                                         <td class="border border-gray-300 px-2 py-1">{{ number_format($sale->discount_amount,2) }}</td>
                                         <td class="border border-gray-300 px-2 py-1">{{ number_format($sale->total_amount,2) }}</td>
-                                        <td class="border border-gray-300 px-2 py-1">{{ number_format($sale->paid_amount,2) }}</td>
+                                        <td class="border border-gray-300 px-2 py-1">{{ number_format($sale->paid_amount ?? 0, 2) }}</td>
                                         <td class="border border-gray-300 px-2 py-1">{{ number_format($sale->due_amount,2) }}</td>
                                     </tr>
                                     @empty

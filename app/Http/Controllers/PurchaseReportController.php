@@ -69,30 +69,6 @@ class PurchaseReportController extends Controller
     }
 
 
-    // public function dashboard()
-    // {
-    //     $data = [
-    //         'totalPurchase' => Purchase::sum('total_amount'),
-    //         'totalDue' => Purchase::sum('due_amount'),
-    //         'todayPurchase' => Purchase::whereDate('date', today())->sum('total_amount'),
-    //         'todayDue' => Purchase::whereDate('date', today())->sum('due_amount'),
-    //         'monthlyPurchase' => Purchase::whereMonth('date', now()->month)
-    //             ->whereYear('date', now()->year)
-    //             ->sum('total_amount'),
-    //         'monthlyDue' => Purchase::whereMonth('date', now()->month)
-    //             ->whereYear('date', now()->year)
-    //             ->sum('due_amount'),
-    //         'supplierDue' => Purchase::select(
-    //                 'supplier_id',
-    //                 DB::raw('SUM(due_amount) as total_due')
-    //             )
-    //             ->groupBy('supplier_id')
-    //             ->with('supplier')
-    //             ->get()
-    //     ];
-    //     return view('purchase.dashboard', $data);
-    // }
-
     public function dashboard()
     {
         $totalPurchase = Purchase::sum('total_amount');
@@ -138,74 +114,10 @@ class PurchaseReportController extends Controller
     )
     ->paginate(15);
 
-return view('purchase.stock_report', compact('stocks'));
+        return view('purchase.stock_report', compact('stocks'));
     }
 
-    // public function supplierPayments(Request $request)
-    // {
-    //     $query = Supplier::query();
-    //     if ($request->supplier_id) {
-    //         $query->where('id', $request->supplier_id);
-    //     }
-    //     $suppliers = $query->with([
-    //         'payments' => function($q) use ($request){
-    //             if ($request->from_date && $request->to_date) {
-    //                 $q->whereBetween('payment_date', [
-    //                     $request->from_date,
-    //                     $request->to_date
-    //                 ]);
-    //             }
-    //         },
-    //         'purchases' => function($q) use ($request){
-    //             if ($request->from_date && $request->to_date) {
-    //                 $q->whereBetween('date', [
-    //                     $request->from_date,
-    //                     $request->to_date
-    //                 ]);
-    //             }
-    //         },
-    //         'returns' => function($q) use ($request){
-    //             if ($request->from_date && $request->to_date) {
-    //                 $q->whereBetween('return_date', [
-    //                     $request->from_date,
-    //                     $request->to_date
-    //                 ]);
-    //             }
-    //         },
-    //     ])->get();
-    //         $reports = $suppliers->map(function($s){
-    //         $totalPurchase = $s->purchases->sum('total_amount');
-    //         $purchasePayment = $s->purchases->sum('paid_amount');
-    //         $supplierPayment = $s->payments->sum('amount');
-    //         $totalReturn = $s->returns->sum('total_amount');
-    //         $totalPurchasesPay = $supplierPayment + $purchasePayment;
-    //         $totalPayment = $supplierPayment + $totalReturn;
-    //         $due = $totalPurchase - $totalPayment;
-
-    //     return [
-    //         'supplier' => $s,
-    //         'payments' => $s->payments,
-    //         'purchases' => $s->purchases,
-    //         'returns' => $s->returns,
-    //         'supplierPayment'    => $supplierPayment,
-    //         'purchasePayment'    => $purchasePayment,
-    //         'totalPurchasesPay'  => $totalPurchasesPay,
-    //         'totalPayment'       => $totalPayment,
-    //         'totalPurchase' => $totalPurchase,
-    //         'totalReturn'   => $totalReturn,
-    //         'due'           => $due,
-    //     ];
-    // });
-    //     // PDF Export
-    //     if ($request->has('pdf')) {
-    //         $pdf = \PDF::loadView(
-    //             'reports.supplier_payments_pdf',
-    //             compact('reports')
-    //         );
-    //         return $pdf->download('supplier-payments.pdf');
-    //     }
-    //     return view('reports.supplier_payments', compact('reports'));
-    // }
+    
     public function supplierPayments(Request $request)
     {
         $query = Supplier::query();

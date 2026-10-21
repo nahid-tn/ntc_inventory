@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Chronological Purchase Report</title>
+
+<style>
+@page {
+    size: A4 portrait;
+    margin: 20mm 15mm 25mm 15mm;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #333;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.logo {
+    width: 60px;
+    height: auto;
+}
+
+.company-info {
+    flex: 1;
+}
+
+.company-name {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.report-title {
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    margin: 15px 0;
+}
+
+.info-box {
+    background: #f5f5f5;
+    padding: 10px;
+    margin: 10px 0;
+    border-left: 3px solid #333;
+}
+
+.info-line {
+    margin: 5px 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+}
+
+table, th, td {
+    border: 0.5px solid #000;
+}
+
+th, td {
+    padding: 8px 5px;
+    text-align: center;
+    vertical-align: top;
+}
+
+th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.positive {
+    color: green;
+    font-weight: bold;
+}
+
+.negative {
+    color: red;
+    font-weight: bold;
+}
+
+.nested-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.nested-table td {
+    border: none;
+    border-bottom: 1px solid #ddd;
+    padding: 5px;
+    font-size: 10px;
+}
+
+.nested-table-header {
+    background-color: #e0e0e0;
+    font-weight: bold;
+}
+
+.summary-box {
+    margin-top: 15px;
+    padding: 10px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+}
+
+.summary-line {
+    margin: 5px 0;
+}
+
+.total-row {
+    background-color: #f0f0f0;
+    font-weight: bold;
+}
+
+footer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 10px;
+    border-top: 1px solid #ccc;
+    padding-top: 10px;
+}
+
+.no-data {
+    text-align: center;
+    padding: 30px;
+    color: #999;
+    font-style: italic;
+}
+</style>
+
+</head>
+<body>
+
+
+
+<div class="header">
+    <div class="logo-area">
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAABmCAYAAABiO7sWAAAACXBIWXMAAAsTAAALEwEAmpwYAAAF+mlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxNDUgNzkuMTYzNDk5LCAyMDE4LzA4LzEzLTE2OjQwOjIyICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1sbnM6cGhvdG9zaG9wPSJodHRwOi8vbnMuYWRvYmUuY29tL3Bob3Rvc2hvcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RFdnQ9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZUV2ZW50IyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ0MgMjAxOSAoV2luZG93cykiIHhtcDpDcmVhdGVEYXRlPSIyMDI1LTA5LTI5VDE4OjE0OjQxKzA2OjAwIiB4bXA6TW9kaWZ5RGF0ZT0iMjAyNS0wOS0yOVQxODoxNjozNSswNjowMCIgeG1wOk1ldGFkYXRhRGF0ZT0iMjAyNS0wOS0yOVQxODoxNjozNSswNjowMCIgZGM6Zm9ybWF0PSJpbWFnZS9wbmciIHBob3Rvc2hvcDpDb2xvck1vZGU9IjMiIHBob3Rvc2hvcDpJQ0NQcm9maWxlPSJzUkdCIElFQzYxOTY2LTIuMSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo1YjdjOGVjNC1hOTY5LWI4NGQtOThlZS1mMDcwYmY3MWU1OTEiIHhtcE1NOkRvY3VtZW50SUQ9ImFkb2JlOmRvY2lkOnBob3Rvc2hvcDplYjFjMTJiYy1iMjdhLTUzNDMtYTY2Zi1lODM3NzdmOWMzM2MiIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDo2YTIyNThmMC04MzM5LWZiNGMtOTI4MC1hZTQyMDc0MDYwM2YiPiA8eG1wTU06SGlzdG9yeT4gPHJkZjpTZXE+IDxyZGY6bGkgc3RFdnQ6YWN0aW9uPSJjcmVhdGVkIiBzdEV2dDppbnN0YW5jZUlEPSJ4bXAuaWlkOjZhMjI1OGYwLTgzMzktZmI0Yy05MjgwLWFlNDIwNzQwNjAzZiIgc3RFdnQ6d2hlbj0iMjAyNS0wOS0yOVQxODoxNDo0MSswNjowMCIgc3RFdnQ6c29mdHdhcmVBZ2VudD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTkgKFdpbmRvd3MpIi8+IDxyZGY6bGkgc3RFdnQ6YWN0aW9uPSJzYXZlZCIgc3RFdnQ6aW5zdGFuY2VJRD0ieG1wLmlpZDo1YjdjOGVjNC1hOTY5LWI4NGQtOThlZS1mMDcwYmY3MWU1OTEiIHN0RXZ0OndoZW49IjIwMjUtMDktMjlUMTg6MTY6MzUrMDY6MDAiIHN0RXZ0OnNvZnR3YXJlQWdlbnQ9IkFkb2JlIFBob3Rvc2hvcCBDQyAyMDE5IChXaW5kb3dzKSIgc3RFdnQ6Y2hhbmdlZD0iLyIvPiA8L3JkZjpTZXE+IDwveG1wTU06SGlzdG9yeT4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz45aCzLAAA+vUlEQVR4nO29ebRl2V3f99nTGe7whhq7u3oslaaWuiUQsiJiQELGEAQGx5ZsZGPj2Ak4gCfiBY6TuLGD5WCv2GE5eHmRxMvBhkSymRwtIQuQBEjCMoPQLHWrh+qxpjfd6Qx771/+2Ofe96q6hvuqXnW3RX1rnbr3vnvuOXvv89u//Zu3EhGuBKXUFb8TEaWUuvKPX2Ao4CXTmFt4wTGnY329FzhIYr7ytFket4j5FuAGCPogcU1iPAiKv4U/EHhJEPQ1cYv93sKS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" class="logo" alt="Logo">
+                
+        <div class="company-info">
+            <div class="company-name">
+                Nafis Trade Corporation
+            </div>
+            <div style="font-size: 11px;">
+                 
+                            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="report-title">
+    Chronological Purchase Report
+</div>
+
+
+<div class="info-box">
+    <div class="info-line">
+        <strong>Period:</strong> 01-05-2026 to 14-06-2026
+    </div>
+    <div class="info-line">
+        <strong>Opening Balance:</strong> 6,186,150.71
+    </div>
+    </div>
+
+
+<table>
+    <thead>
+        <tr>
+            <th width="10%">Date</th>
+            <th width="10%">Type</th>
+            <th width="15%">Reference</th>
+            <th width="20%">Supplier</th>
+            <th width="15%">Debit (Purchase)</th>
+            <th width="15%">Credit (Payment)</th>
+            <th width="15%">Balance</th>
+        </tr>
+    </thead>
+    <tbody>
+                                
+                                    
+            
+            <tr>
+                <td>07-05-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>16038</td>
+                <td class="text-left">Famous Trade Corporation</td>
+                <td class="text-right">144,200.00</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    6,330,350.71
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">TAI JI 185 AH 60KG</td>
+                            <td class="text-right">12.00</td>
+                            <td class="text-right">5,875.00</td>
+                            <td class="text-right">70,500.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">VOLTUM 60KG 180AH</td>
+                            <td class="text-right">8.00</td>
+                            <td class="text-right">5,875.00</td>
+                            <td class="text-right">47,000.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">THANDER TP 550W</td>
+                            <td class="text-right">1.00</td>
+                            <td class="text-right">8,200.00</td>
+                            <td class="text-right">8,200.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">LUMINOUS 700 SYSTEM</td>
+                            <td class="text-right">1.00</td>
+                            <td class="text-right">8,500.00</td>
+                            <td class="text-right">8,500.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">DJDC CHARGER 12V 200AH</td>
+                            <td class="text-right">10.00</td>
+                            <td class="text-right">910.00</td>
+                            <td class="text-right">9,100.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                                    
+            
+            <tr>
+                <td>10-05-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>4734</td>
+                <td class="text-left">Maa Cycle Store</td>
+                <td class="text-right">25,680.48</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    6,356,031.19
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">PATA MOTOR</td>
+                            <td class="text-right">1.00</td>
+                            <td class="text-right">6,050.00</td>
+                            <td class="text-right">6,050.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">WHITE VALVE TUBE</td>
+                            <td class="text-right">2.00</td>
+                            <td class="text-right">320.00</td>
+                            <td class="text-right">640.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">SMALL POTTI</td>
+                            <td class="text-right">1.00</td>
+                            <td class="text-right">145.00</td>
+                            <td class="text-right">145.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">BIG POTTI</td>
+                            <td class="text-right">1.00</td>
+                            <td class="text-right">120.00</td>
+                            <td class="text-right">120.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">PLASTIC BUSH</td>
+                            <td class="text-right">100.00</td>
+                            <td class="text-right">2.25</td>
+                            <td class="text-right">225.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">CHOCOLATE SET</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">65.00</td>
+                            <td class="text-right">260.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">MISUK ISPANDEL</td>
+                            <td class="text-right">10.00</td>
+                            <td class="text-right">78.00</td>
+                            <td class="text-right">780.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">4 NUT HUPS</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">535.00</td>
+                            <td class="text-right">2,140.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">3-25-16 RING</td>
+                            <td class="text-right">5.00</td>
+                            <td class="text-right">1,050.00</td>
+                            <td class="text-right">5,250.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">12 NUT</td>
+                            <td class="text-right">53.00</td>
+                            <td class="text-right">4.16</td>
+                            <td class="text-right">220.48</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">HEAD LIGHT</td>
+                            <td class="text-right">3.00</td>
+                            <td class="text-right">230.00</td>
+                            <td class="text-right">690.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">4 Futa Ring Cover</td>
+                            <td class="text-right">10.00</td>
+                            <td class="text-right">13.00</td>
+                            <td class="text-right">130.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">Back / Rear anti-cutter</td>
+                            <td class="text-right">3.00</td>
+                            <td class="text-right">125.00</td>
+                            <td class="text-right">375.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">Front anticutter</td>
+                            <td class="text-right">3.00</td>
+                            <td class="text-right">95.00</td>
+                            <td class="text-right">285.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">Ag Chakkar Madgard</td>
+                            <td class="text-right">3.00</td>
+                            <td class="text-right">240.00</td>
+                            <td class="text-right">720.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">22 DAT PINIUM KANGARO</td>
+                            <td class="text-right">10.00</td>
+                            <td class="text-right">39.00</td>
+                            <td class="text-right">390.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">SOCOP AR GOLD</td>
+                            <td class="text-right">2.00</td>
+                            <td class="text-right">3,050.00</td>
+                            <td class="text-right">6,100.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">DIFFERENTIAL XL</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">290.00</td>
+                            <td class="text-right">1,160.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                                    
+            
+            <tr>
+                <td>10-05-2026</td>
+                <td>
+                    <strong>Payment</strong>
+                </td>
+                <td>Payment against 4734</td>
+                <td class="text-left">Maa Cycle Store</td>
+                <td class="text-right">-</td>
+                <td class="text-right">25,680.00</td>
+                <td class="text-right positive">
+                    6,330,351.19
+                </td>
+            </tr>
+            
+            
+                        
+                                    
+            
+            <tr>
+                <td>11-05-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>28325</td>
+                <td class="text-left">Famous Trade Corporation</td>
+                <td class="text-right">123,485.00</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    6,453,836.19
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">DODO 200AH</td>
+                            <td class="text-right">5.00</td>
+                            <td class="text-right">7,625.00</td>
+                            <td class="text-right">38,125.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">JINDING POWER PLUS (SR) 140AH</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">12,900.00</td>
+                            <td class="text-right">51,600.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">DOWEDO 76KG 200AH</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">8,125.00</td>
+                            <td class="text-right">32,500.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                                    
+            
+            <tr>
+                <td>16-05-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>17966</td>
+                <td class="text-left">Famous Trade Corporation</td>
+                <td class="text-right">289,250.00</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    6,743,086.19
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">JINDING POWER PLUS (SR) 140AH</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">12,900.00</td>
+                            <td class="text-right">51,600.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">SANDI 220 AH (EV)</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">12,900.00</td>
+                            <td class="text-right">51,600.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">DOWEDO 60KG 120AH</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">6,750.00</td>
+                            <td class="text-right">27,000.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">DODO 200AH</td>
+                            <td class="text-right">5.00</td>
+                            <td class="text-right">7,625.00</td>
+                            <td class="text-right">38,125.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">CHINA MAGIC 76KH 350AH</td>
+                            <td class="text-right">5.00</td>
+                            <td class="text-right">7,625.00</td>
+                            <td class="text-right">38,125.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">MAGNIT- 150AH</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">6,800.00</td>
+                            <td class="text-right">27,200.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">MAGNIT-  210AH EV</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">13,900.00</td>
+                            <td class="text-right">55,600.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                                    
+            
+            <tr>
+                <td>19-05-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>INV-000112</td>
+                <td class="text-left">NILU TRADE CONSUMER IND. LTD.</td>
+                <td class="text-right">23,026.00</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    6,766,112.19
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">BROCK WATER ACID-1280</td>
+                            <td class="text-right">5.00</td>
+                            <td class="text-right">2,650.00</td>
+                            <td class="text-right">13,250.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">10 LITER - THE ACTIVE</td>
+                            <td class="text-right">50.00</td>
+                            <td class="text-right">86.92</td>
+                            <td class="text-right">4,346.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">5 LITER - THE ACTIVE</td>
+                            <td class="text-right">100.00</td>
+                            <td class="text-right">48.00</td>
+                            <td class="text-right">4,800.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">20 LITER DRINGKLIN WATER</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">45.00</td>
+                            <td class="text-right">180.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">DSP</td>
+                            <td class="text-right">1.00</td>
+                            <td class="text-right">450.00</td>
+                            <td class="text-right">450.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                                    
+            
+            <tr>
+                <td>19-05-2026</td>
+                <td>
+                    <strong>Payment</strong>
+                </td>
+                <td>Payment against INV-000112</td>
+                <td class="text-left">NILU TRADE CONSUMER IND. LTD.</td>
+                <td class="text-right">-</td>
+                <td class="text-right">4,695.00</td>
+                <td class="text-right positive">
+                    6,761,417.19
+                </td>
+            </tr>
+            
+            
+                        
+                                    
+            
+            <tr>
+                <td>20-05-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>17906</td>
+                <td class="text-left">Famous Trade Corporation</td>
+                <td class="text-right">51,600.00</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    6,813,017.19
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">ELONG 200AH EV DURABLE</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">12,900.00</td>
+                            <td class="text-right">51,600.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                                    
+            
+            <tr>
+                <td>22-05-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>INV-000100</td>
+                <td class="text-left">Uttom Cycal Store</td>
+                <td class="text-right">25,675.00</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    6,838,692.19
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">MAX 180AH RDY</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">5,950.00</td>
+                            <td class="text-right">23,800.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">MEGHNA TIAR</td>
+                            <td class="text-right">3.00</td>
+                            <td class="text-right">625.00</td>
+                            <td class="text-right">1,875.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                                    
+            
+            <tr>
+                <td>22-05-2026</td>
+                <td>
+                    <strong>Payment</strong>
+                </td>
+                <td>Payment against INV-000100</td>
+                <td class="text-left">Uttom Cycal Store</td>
+                <td class="text-right">-</td>
+                <td class="text-right">25,675.00</td>
+                <td class="text-right positive">
+                    6,813,017.19
+                </td>
+            </tr>
+            
+            
+                        
+                                    
+            
+            <tr>
+                <td>24-05-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>INV-000101</td>
+                <td class="text-left">HAPPY CYCEL STOR</td>
+                <td class="text-right">6,500.00</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    6,819,517.19
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">JELI MOTOR</td>
+                            <td class="text-right">1.00</td>
+                            <td class="text-right">6,500.00</td>
+                            <td class="text-right">6,500.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                                    
+            
+            <tr>
+                <td>24-05-2026</td>
+                <td>
+                    <strong>Payment</strong>
+                </td>
+                <td>Payment against INV-000101</td>
+                <td class="text-left">HAPPY CYCEL STOR</td>
+                <td class="text-right">-</td>
+                <td class="text-right">6,500.00</td>
+                <td class="text-right positive">
+                    6,813,017.19
+                </td>
+            </tr>
+            
+            
+                        
+                                    
+            
+            <tr>
+                <td>24-05-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>17861</td>
+                <td class="text-left">Famous Trade Corporation</td>
+                <td class="text-right">197,000.00</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    7,010,017.19
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">JINDING POWER PLUS (SR) 140AH</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">12,900.00</td>
+                            <td class="text-right">51,600.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">VOLTUM 60KG 180AH</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">5,875.00</td>
+                            <td class="text-right">23,500.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">CHINA MAGIC 60KH 150AH</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">6,125.00</td>
+                            <td class="text-right">24,500.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">KINLONG 160AH</td>
+                            <td class="text-right">16.00</td>
+                            <td class="text-right">5,975.00</td>
+                            <td class="text-right">95,600.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                                    
+            
+            <tr>
+                <td>24-05-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>17866</td>
+                <td class="text-left">Famous Trade Corporation</td>
+                <td class="text-right">54,500.00</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    7,064,517.19
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">DOWEDO 60KG 120AH</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">6,750.00</td>
+                            <td class="text-right">27,000.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">SF 60KG 120AH</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">6,800.00</td>
+                            <td class="text-right">27,200.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                                    
+            
+            <tr>
+                <td>25-05-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>4876</td>
+                <td class="text-left">Maa Cycle Store</td>
+                <td class="text-right">4,845.00</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    7,069,362.19
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">B. WATER BATTERY COVER</td>
+                            <td class="text-right">12.00</td>
+                            <td class="text-right">60.00</td>
+                            <td class="text-right">720.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">S. WATER BATTERY COVER</td>
+                            <td class="text-right">7.00</td>
+                            <td class="text-right">50.00</td>
+                            <td class="text-right">350.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">HIGHDRO MEETER</td>
+                            <td class="text-right">5.00</td>
+                            <td class="text-right">85.00</td>
+                            <td class="text-right">425.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">KEY LOOCK</td>
+                            <td class="text-right">10.00</td>
+                            <td class="text-right">75.00</td>
+                            <td class="text-right">750.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">3-25-16 TUBE MEGHNA MTF</td>
+                            <td class="text-right">5.00</td>
+                            <td class="text-right">315.00</td>
+                            <td class="text-right">1,575.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">76-JR GOLD CHAIN</td>
+                            <td class="text-right">5.00</td>
+                            <td class="text-right">205.00</td>
+                            <td class="text-right">1,025.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                                    
+            
+            <tr>
+                <td>25-05-2026</td>
+                <td>
+                    <strong>Payment</strong>
+                </td>
+                <td>Payment against 4876</td>
+                <td class="text-left">Maa Cycle Store</td>
+                <td class="text-right">-</td>
+                <td class="text-right">5,000.00</td>
+                <td class="text-right positive">
+                    7,064,362.19
+                </td>
+            </tr>
+            
+            
+                        
+                                    
+            
+            <tr>
+                <td>01-06-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>4926</td>
+                <td class="text-left">Maa Cycle Store</td>
+                <td class="text-right">10,051.00</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    7,074,413.19
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">JR VAN-RIKSWA IC</td>
+                            <td class="text-right">100.00</td>
+                            <td class="text-right">20.00</td>
+                            <td class="text-right">2,000.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">MISUK MOTOR IC</td>
+                            <td class="text-right">20.00</td>
+                            <td class="text-right">90.00</td>
+                            <td class="text-right">1,800.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">GOL AYNA</td>
+                            <td class="text-right">5.00</td>
+                            <td class="text-right">65.00</td>
+                            <td class="text-right">325.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">SL- 1632 BORO LOMBA AYNA</td>
+                            <td class="text-right">6.00</td>
+                            <td class="text-right">90.00</td>
+                            <td class="text-right">540.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">28 KATA SK</td>
+                            <td class="text-right">6.00</td>
+                            <td class="text-right">115.00</td>
+                            <td class="text-right">690.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">14 KATA SK</td>
+                            <td class="text-right">6.00</td>
+                            <td class="text-right">30.00</td>
+                            <td class="text-right">180.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">LED CONTROL 10Am BOX</td>
+                            <td class="text-right">10.00</td>
+                            <td class="text-right">115.00</td>
+                            <td class="text-right">1,150.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">LED CONTROL BOX-15A</td>
+                            <td class="text-right">10.00</td>
+                            <td class="text-right">153.00</td>
+                            <td class="text-right">1,530.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">RIPON BRACKSHOW MISUK</td>
+                            <td class="text-right">6.00</td>
+                            <td class="text-right">160.00</td>
+                            <td class="text-right">960.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">KAN</td>
+                            <td class="text-right">6.00</td>
+                            <td class="text-right">103.00</td>
+                            <td class="text-right">618.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">14 KATA CS</td>
+                            <td class="text-right">6.00</td>
+                            <td class="text-right">43.00</td>
+                            <td class="text-right">258.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                                    
+            
+            <tr>
+                <td>01-06-2026</td>
+                <td>
+                    <strong>Payment</strong>
+                </td>
+                <td>Payment against 4926</td>
+                <td class="text-left">Maa Cycle Store</td>
+                <td class="text-right">-</td>
+                <td class="text-right">10,000.00</td>
+                <td class="text-right positive">
+                    7,064,413.19
+                </td>
+            </tr>
+            
+            
+                        
+                                    
+            
+            <tr>
+                <td>07-06-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>INV-000109</td>
+                <td class="text-left">HAFEZ MEJBAH UDDIN</td>
+                <td class="text-right">1,235.00</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    7,065,648.19
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">RAD KEY LOCK</td>
+                            <td class="text-right">10.00</td>
+                            <td class="text-right">67.00</td>
+                            <td class="text-right">670.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">SHORT CABL KOMDAMI</td>
+                            <td class="text-right">79.00</td>
+                            <td class="text-right">5.00</td>
+                            <td class="text-right">395.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">JHIK JHIK LIGHT</td>
+                            <td class="text-right">4.00</td>
+                            <td class="text-right">30.00</td>
+                            <td class="text-right">120.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">MORIJ LIGHT</td>
+                            <td class="text-right">2.00</td>
+                            <td class="text-right">25.00</td>
+                            <td class="text-right">50.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                                    
+            
+            <tr>
+                <td>07-06-2026</td>
+                <td>
+                    <strong>Payment</strong>
+                </td>
+                <td>Payment against INV-000109</td>
+                <td class="text-left">HAFEZ MEJBAH UDDIN</td>
+                <td class="text-right">-</td>
+                <td class="text-right">840.00</td>
+                <td class="text-right positive">
+                    7,064,808.19
+                </td>
+            </tr>
+            
+            
+                        
+                                    
+            
+            <tr>
+                <td>08-06-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>65</td>
+                <td class="text-left">Dicent &amp; Digonto Group</td>
+                <td class="text-right">3,760.00</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    7,068,568.19
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">BRAKE SHOW DECENT</td>
+                            <td class="text-right">10.00</td>
+                            <td class="text-right">155.00</td>
+                            <td class="text-right">1,550.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">6303 RFL</td>
+                            <td class="text-right">10.00</td>
+                            <td class="text-right">80.00</td>
+                            <td class="text-right">800.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">14 KATA RFL</td>
+                            <td class="text-right">10.00</td>
+                            <td class="text-right">36.00</td>
+                            <td class="text-right">360.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">28 KATA RFL</td>
+                            <td class="text-right">10.00</td>
+                            <td class="text-right">105.00</td>
+                            <td class="text-right">1,050.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                                    
+            
+            <tr>
+                <td>08-06-2026</td>
+                <td>
+                    <strong>Payment</strong>
+                </td>
+                <td>Payment against 65</td>
+                <td class="text-left">Dicent &amp; Digonto Group</td>
+                <td class="text-right">-</td>
+                <td class="text-right">3,760.00</td>
+                <td class="text-right positive">
+                    7,064,808.19
+                </td>
+            </tr>
+            
+            
+                        
+                                    
+            
+            <tr>
+                <td>11-06-2026</td>
+                <td>
+                    <strong>Purchase</strong>
+                </td>
+                <td>17765</td>
+                <td class="text-left">Famous Trade Corporation</td>
+                <td class="text-right">111,100.00</td>
+                <td class="text-right">-</td>
+                <td class="text-right positive">
+                    7,175,908.19
+                </td>
+            </tr>
+            
+            
+                        <tr>
+                <td colspan="7" style="padding: 0; background: #fafafa;">
+                    <table class="nested-table">
+                        <tr class="nested-table-header">
+                            <td width="50%" class="text-left"><strong>Product Name</strong></td>
+                            <td width="15%" class="text-right"><strong>Quantity</strong></td>
+                            <td width="15%" class="text-right"><strong>Unit Price</strong></td>
+                            <td width="20%" class="text-right"><strong>Total</strong></td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">HPD HAMKO 200AH</td>
+                            <td class="text-right">2.00</td>
+                            <td class="text-right">24,200.00</td>
+                            <td class="text-right">48,400.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">HAMKO-1200-W IPS SYSTEM</td>
+                            <td class="text-right">1.00</td>
+                            <td class="text-right">13,500.00</td>
+                            <td class="text-right">13,500.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">POWER PLUS GOLD 180AH (LOT)</td>
+                            <td class="text-right">1.00</td>
+                            <td class="text-right">24,600.00</td>
+                            <td class="text-right">24,600.00</td>
+                        </tr>
+                                                <tr>
+                            <td class="text-left">ONE BATTERY 180AH</td>
+                            <td class="text-right">1.00</td>
+                            <td class="text-right">24,600.00</td>
+                            <td class="text-right">24,600.00</td>
+                        </tr>
+                                            </table>
+                </td>
+            </tr>
+                        
+                        
+            
+            <tr class="total-row">
+                <td colspan="4" class="text-right"><strong>Total:</strong></td>
+                <td class="text-right"><strong>1,071,907.48</strong></td>
+                <td class="text-right"><strong>82,150.00</strong></td>
+                <td></td>
+            </tr>
+            
+            </tbody>
+</table>
+
+
+<div class="summary-box">
+    <div class="summary-line">
+        <strong>Summary:</strong>
+    </div>
+    <div class="summary-line">
+        Total Purchases: 1,071,907.48
+    </div>
+    <div class="summary-line">
+        Total Payments: 82,150.00
+    </div>
+    <div class="summary-line">
+        Total Due: 989,757.48
+    </div>
+    <div class="summary-line" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">
+        <strong>Closing Balance:</strong> 7,175,908.19
+    </div>
+</div>
+
+
+<footer>
+    Generated on: 14-06-2026 06:59:14 AM
+</footer>
+
+</body>
+</html>

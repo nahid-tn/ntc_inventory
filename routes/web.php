@@ -24,6 +24,7 @@ use App\Http\Controllers\CustomerReportController;
 use App\Http\Controllers\SalesReportController;
 use App\Http\Controllers\IpsCalculatorController;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\OldProductExchangeController;
 
 
 // Route::get('/', function () {
@@ -83,8 +84,10 @@ Route::middleware(['auth','admin'])->group(function () {
     
     #customer route----
     Route::get('customer/index', [CustomerController::class, 'index'])->name('customer.index');
-    Route::get('customer/productform', [CustomerController::class, 'CustomerForm'])->name('customer.customerform');
-    Route::post('customer/create', [CustomerController::class, 'Create'])->name('customer.create');
+    Route::get('customer/customerform', [CustomerController::class, 'CustomerForm'])->name('customer.customerform');
+    Route::get('customer/new-customer-form', [CustomerController::class, 'NewCustomerForm'])->name('customer.newcustomerform');
+    Route::post('/customer/create',[CustomerController::class,'Create'])->name('customer.create');
+    Route::post('/customer/store',[CustomerController::class,'store'])->name('customer.store');
     Route::get('/customer/edit/{id}', [CustomerController::class, 'Edit'])->name('customer.edit');
     Route::post('/customer/update/{id}', [CustomerController::class, 'update'])->name('customer.update');
     Route::get('customer/delete/{id}', [CustomerController::class, 'destroy'])->name('customer.delete');
@@ -107,17 +110,20 @@ Route::middleware(['auth','admin'])->group(function () {
     Route::put('purchase/{id}', [PurchasesController::class, 'update'])->name('purchase.update');
     Route::get('purchase/{id}/view', [PurchasesController::class, 'view'])->name('purchase.view');
     Route::get('purchase/{id}/pdf', [PurchasesController::class, 'downloadPdf'])->name('purchase.pdf');
-    Route::get('purchase/delete/{id}', [PurchasesController::class, 'Destry'])->name('purchase.delete');
+    Route::get('purchase/delete/{id}', [PurchasesController::class, 'destroy'])->name('purchase.delete');
     Route::get('/purchase-autocomplete', [PurchasesController::class, 'autocomplete'])->name('supplier.autocomplete');
     Route::get('/purchase/dues', [PurchasesController::class, 'supplierDues'])->name('supplier.dues');
     Route::get('/autocomplete/supplier', [PurchasesController::class, 'supplierAutocomplete'])->name('autocomplete.supplier');
     Route::get('/autocomplete/invoice', [PurchasesController::class, 'invoiceAutocomplete'])->name('autocomplete.invoice');
     Route::post('/purchase/{id}/payment', [PurchasesController::class, 'addPayment'])->name('purchase.addPayment');
+    
     Route::get('/purchase/{purchase}/return', [PurchasesController::class, 'createReturn'])->name('purchase.return_create');
     Route::post('/purchase/{purchase}/return', [PurchasesController::class, 'storeReturn'])->name('purchase.return.store');
     Route::get('/purchase/{id}/info', [PurchasesController::class, 'invoiceInfo']);
     Route::get('/purchase/{id}/invoice', [PurchasesController::class, 'showInvoice'])->name('purchase.invoice');
-    Route::get('/purchase-report-pdf', [PurchasesController::class, 'purchaseReportPdf'])->name('purchase.report.pdf');
+
+    // Route::get('/purchase-report-pdf', [PurchasesController::class, 'purchaseReportPdf'])->name('purchase.chronological_report_pdf');
+    Route::get('/purchase-group-report-pdf', [PurchasesController::class, 'purchaseGroupReportPdf'])->name('purchase.group_report_pdf');
 
     Route::resource('purchase-orders', PurchaseOrderController::class);
     Route::get('purchase-orders/{id}/convert',[PurchaseOrderController::class, 'convertToPurchase'])->name('purchase-orders.convert');
@@ -142,6 +148,7 @@ Route::middleware(['auth','admin'])->group(function () {
     Route::put('/sale/{id}', [SalesController::class, 'update'])->name('sale.update');
     Route::get('/sale/{id}', [SalesController::class, 'view'])->name('sale.view');
     Route::get('/sale/{id}/pdf', [SalesController::class, 'downloadPdf'])->name('sale.pdf');
+    Route::get('/sale/download-pdf/{id}', [SalesController::class, 'downloadPdf'])->name('sale.downloadPdf');
     Route::delete('/sale/{id}', [SalesController::class, 'destroy'])->name('sale.delete');
     Route::get('/sale-autocomplete', [SalesController::class, 'autocomplete'])->name('sale.autocomplete');
     Route::get('/sale-autocomplete', [SalesController::class, 'saleAutocomplete'])->name('sales.autocomplete');
@@ -150,7 +157,6 @@ Route::middleware(['auth','admin'])->group(function () {
     // Sale Partial Payment
     Route::get('sale/{id}/edit-partial', [SalesController::class, 'editPartial'])->name('sale.editPartial');
     Route::post('sale/{id}/save-partial', [SalesController::class, 'savePartialPayment'])->name('sale.savePartialPayment');
-    // রাউট
     Route::put('sale/partial-payment/{id}/update', [SalesController::class, 'updatePartialPayment'])->name('sale.updatePartialPayment');
     Route::delete('sale/partial-payment/{id}/delete', [SalesController::class, 'deletePartialPayment'])->name('sale.deletePartialPayment');
     Route::get('sale/{id}/partial-payment-pdf', [SalesController::class, 'partialPaymentPdf'])->name('sale.partialPaymentPdf');
@@ -217,6 +223,18 @@ Route::middleware(['auth','admin'])->group(function () {
     Route::get('/purchase-return-item-report-form',[PurchaseReturnController::class,'itemWiseReportForm'])->name('purchase-return.item-wise-report-form');
     Route::get('/purchase-return-item-report', [PurchaseReturnController::class, 'itemWiseReport'])->name('purchase-return.item-wise-report');
     Route::get('/purchase-return/purchase-return-product-details/{product_id}', [PurchaseReturnController::class, 'productReturnDetails'])->name('purchase-return.product-details');
+    });
+
+    Route::prefix('old-product-exchange')->group(function () {
+        Route::get('/',[OldProductExchangeController::class,'index'])->name('old_product_exchange.index');
+        Route::get('/create', [OldProductExchangeController::class, 'create'])->name('old_product_exchange.create');
+        Route::post('/', [OldProductExchangeController::class, 'store'])->name('old_product_exchange.store');
+        Route::get('/{id}', [OldProductExchangeController::class, 'show'])->name('old_product_exchange.show');
+        Route::get('/{id}/edit', [OldProductExchangeController::class, 'edit'])->name('old_product_exchange.edit');
+        Route::put('/{id}', [OldProductExchangeController::class, 'update'])->name('old_product_exchange.update');
+        Route::delete('/{id}', [OldProductExchangeController::class, 'destroy'])->name('old_product_exchange.destroy');
+        Route::get('/{id}/invoice', [OldProductExchangeController::class, 'invoice'])->name('old_product_exchange.invoice');
+        Route::get('/product/{id}', [OldProductExchangeController::class, 'product'])->name('old_product_exchange.product');
     });
 
     // Route::get('/',[ExpenseController::class,'index'])->name('expense.index');

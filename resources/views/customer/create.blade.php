@@ -23,15 +23,7 @@
                         </div>
                         <div class="form-group">
                             <label>Address</label>
-                            <textarea
-    class="form-control"
-    name="address"
-    placeholder="Enter Customer's Address"
-    rows="2"
-    oninput="autoResize(this)"
-    style="resize: none; overflow: hidden;"
-    required>
-</textarea>
+                            <textarea class="form-control" name="address" placeholder="Enter Customer's Address" rows="2" oninput="autoResize(this)" style="resize: none; overflow: hidden;" required></textarea>
                         </div>
                         <button type="submit" class="btn btn-primary">Add Customer</button> | 
                         <button type="button" class="btn btn-secondary" onclick="history.back()">

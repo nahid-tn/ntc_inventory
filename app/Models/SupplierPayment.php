@@ -10,8 +10,6 @@ class SupplierPayment extends Model
 {
     use HasFactory;
 
-    use HasFactory;
-
     protected $fillable = [
         'supplier_id', 'purchase_id', 'amount', 'payment_date', 'BankName', 'account_number', 'payment_method', 'cheque_number', 'transaction_number', 'cheque_image', 'deposit_slip', 'note'
     ];

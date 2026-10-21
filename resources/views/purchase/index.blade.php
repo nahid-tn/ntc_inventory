@@ -1,8 +1,7 @@
 <x-app-layout>
 
 <x-slot name="header">
-    <h2 class="font-semibold text-xl text-gray-800">
-        Purchase Report
+    <h2 class="font-semibold text-xl text-gray-800"> Purchase List        
     </h2>
     <style>
         @page { margin: 50px 50px; }
@@ -60,33 +59,79 @@
         <div class="bg-white shadow rounded p-4">
         {{-- ================= SEARCH FORM ================= --}}
        <form method="GET" action="{{ route('purchase.index') }}" class="mb-4">
-            <div class="row g-2">
-                <div class="col-md-2">
-                    <input type="text" name="invoice" value="{{ request('invoice') }}" class="form-control" placeholder="Invoice No">
-                </div>
-                <div class="col-md-2">
-                    <input type="text" id="supplier_search" name="supplier" value="{{ request('supplier') }}" class="form-control" placeholder="Supplier Name">
-                    <input type="hidden" id="supplier_id" name="supplier_id">
-                </div>
-                <div class="col-md-2">
-                    <input type="text" id="product_search" name="product" value="{{ request('product') }}" class="form-control" placeholder="Product Name">
-                    <input type="hidden" id="product_id" name="product_id">
-                </div>
+            <div class="row g-2 align-items-center">
 
-                <div class="col-md-2">
-                    <input type="date" name="from" value="{{ request('from') }}" class="form-control">
-                </div>
+    {{-- Invoice No --}}
+    <div class="col">
+        <input type="text"
+               name="invoice"
+               value="{{ request('invoice') }}"
+               class="form-control"
+               placeholder="Invoice No">
+    </div>
 
-                <div class="col-md-2">
-                    <input type="date" name="to" value="{{ request('to') }}" class="form-control">
-                </div>
+    {{-- Supplier --}}
+    <div class="col">
+        <input type="text"
+               id="supplier_search"
+               name="supplier"
+               value="{{ request('supplier') }}"
+               class="form-control"
+               placeholder="Supplier Name">
 
-                <div class="col-md-2 d-flex gap-2">
-                    <button class="btn btn-primary">🔍 Search</button>
-                    <button type="submit" formaction="{{ route('purchase.report.pdf') }}" formtarget="_blank" class="btn btn-danger"> 📄 PDF </button>
-                </div>
-                
-            </div>
+        <input type="hidden"
+               id="supplier_id"
+               name="supplier_id">
+    </div>
+
+    {{-- Product --}}
+    <div class="col">
+        <input type="text"
+               id="product_search"
+               name="product"
+               value="{{ request('product') }}"
+               class="form-control"
+               placeholder="Product Name">
+
+        <input type="hidden"
+               id="product_id"
+               name="product_id">
+    </div>
+
+    {{-- From Date --}}
+    <div class="col">
+        <input type="date"
+               name="from"
+               value="{{ request('from') }}"
+               class="form-control">
+    </div>
+
+    {{-- To Date --}}
+    <div class="col">
+        <input type="date"
+               name="to"
+               value="{{ request('to') }}"
+               class="form-control">
+    </div>
+
+    {{-- Search Button --}}
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary text-nowrap">
+            <i class="fas fa-search"></i> Search
+        </button>
+    </div>
+
+    {{-- PDF Button --}}
+    <div class="col-auto">
+        <button type="submit"
+                formaction="{{ route('purchase.group_report_pdf') }}"
+                formtarget="_blank"
+                class="btn btn-danger text-nowrap">
+            <i class="fas fa-file-pdf"></i> PDF
+        </button>
+    </div>
+
+</div>
 
         </form>
 
@@ -157,8 +202,7 @@
                                     @php 
                                         $sl = 1;  // Serial number
                                         $oldTotal = 0; // Old products total
-                                    @endphp  
-
+                                    @endphp
                                     {{-- New Products --}}
                                     @foreach($purchase->details as $item)
                                         <tr>
@@ -211,108 +255,72 @@
 </div>
     <script>
 
-$(document).ready(function(){
+    $(document).ready(function(){
 
-// ================= SUPPLIER AUTOCOMPLETE =================
+    // ================= SUPPLIER AUTOCOMPLETE =================
+        $("#supplier_search").autocomplete({
+        source: function(request,response){
+        $.ajax({
+        url: "{{ url('/supplier-autocomplete') }}",
+        dataType:"json",
+        data:{
+        term: request.term
+        },
 
-$("#supplier_search").autocomplete({
+        success:function(data){
+            response($.map(data,function(item){
+            return{
+            label: item.value + " | " + item.mobile,
+            value: item.value,
+            id: item.id
+            };
+            }));
+            }
+            });
+            },
 
-source: function(request,response){
+            minLength:1,
 
-$.ajax({
+            select:function(event,ui){
+            $("#supplier_search").val(ui.item.value);
+            $("#supplier_id").val(ui.item.id);
+            return false;
+            }
 
-url: "{{ url('/supplier-autocomplete') }}",
-
-dataType:"json",
-
-data:{
-term: request.term
-},
-
-success:function(data){
-
-response($.map(data,function(item){
-
-return{
-
-label: item.value + " | " + item.mobile,
-value: item.value,
-id: item.id
-
-};
-
-}));
-
-}
-
-});
-
-},
-
-minLength:1,
-
-select:function(event,ui){
-
-$("#supplier_search").val(ui.item.value);
-$("#supplier_id").val(ui.item.id);
-
-return false;
-
-}
-
-});
+        });
 
 
-// ================= PRODUCT AUTOCOMPLETE =================
+    // ================= PRODUCT AUTOCOMPLETE =================
 
-$("#product_search").autocomplete({
+    $("#product_search").autocomplete({
+        source:function(request,response){
+        $.ajax({
+        url:"{{ url('/product-autocomplete') }}",
+        dataType:"json",
+        data:{
+        term: request.term
+        },
 
-source:function(request,response){
+        success:function(data){
+        response($.map(data,function(item){
+        return{
+        label: item.value + " | Stock: " + item.stock,
+        value: item.value,
+        id: item.id
+        };
 
-$.ajax({
+        }));
+        }
+        });
+        },
+        minLength:1,
+        select:function(event,ui){
+        $("#product_search").val(ui.item.value);
+        $("#product_id").val(ui.item.id);
 
-url:"{{ url('/product-autocomplete') }}",
-
-dataType:"json",
-
-data:{
-term: request.term
-},
-
-success:function(data){
-
-response($.map(data,function(item){
-
-return{
-
-label: item.value + " | Stock: " + item.stock,
-value: item.value,
-id: item.id
-
-};
-
-}));
-
-}
-
-});
-
-},
-
-minLength:1,
-
-select:function(event,ui){
-
-$("#product_search").val(ui.item.value);
-$("#product_id").val(ui.item.id);
-
-return false;
-
-}
-
-});
-
-});
-
-</script>
+        return false;
+        }
+        });
+    });
+    </script>
 </x-app-layout>

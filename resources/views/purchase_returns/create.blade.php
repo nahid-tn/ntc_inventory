@@ -26,7 +26,7 @@
                         </div>
                     @endif
 
-                    <form action="{{ route('purchase-return.store') }}" method="post">
+                    <form action="{{ route('purchase-return.store') }}" method="post" enctype="multipart/form-data">
                         @csrf
 
                         {{-- Invoice & Date --}}
@@ -87,22 +87,37 @@
                             </tbody>
                         </table>
                                     <button type="button" class="btn btn-success" onclick="addRow()"> Add More</button>
-                        <div class="form-row mb-3">
-                            <div class="form-group col-md-4">
+                        <div class="form-row mb-4 mt-3">
+                            <div class="form-group col-md-3">
+                                <label>Transport Cost</label>
+                                <input type="number" class="form-control" name="transport_cost" id="transport_cost" value="0" step="0.01">
+                            </div>
+                            <div class="form-group col-md-3">
                                 <label>Total Amount</label>
                                 <input type="text" class="form-control" name="total_amount" id="total_amount" value="0" readonly>
                             </div>
-                            <div class="form-group col-md-6">
-                                <label>Reason</label>
+                            <div class="form-group col-md-3">
+                                <label>Note</label>
                                 <input type="text" class="form-control" name="note" placeholder="Any Reason for Return">
                             </div>
+                            {{-- <div class="form-group col-md-3">
+                                <label>Transport Receive Image</label>
+                                <input type="file" class="form-control border" name="transport_receive" accept="application/pdf">
+                            </div> --}}
+                            <div class="form-group col-md-3">
+                                <label>Transport Receive</label>
+
+                                <input type="file"
+                                    class="form-control"
+                                    name="transport_receive"
+                                    id="transport_receive"
+                                    accept=".jpg,.jpeg,.png,.webp,.pdf">
+
+                                <!-- Preview Area -->
+                                <div id="filePreview" style="margin-top:10px;"></div>
+                            </div>
                         </div>
-
-                        
-
-                        <button type="submit" class="btn btn-primary">Submit Returne</button> | <button type="button" class="btn btn-secondary" onclick="history.back()">
-    ← Back
-</button>
+                        <button type="submit" class="btn btn-primary">Submit Returne</button> | <button type="button" class="btn btn-secondary" onclick="history.back()"> ← Back </button>
                     </form>
                 </div>
             </div>
@@ -235,4 +250,54 @@ $(document).ready(function() {
             }
         });
     });
+
+
+    document.getElementById('transport_receive').addEventListener('change', function (e) {
+
+    const file = e.target.files[0];
+    const preview = document.getElementById('filePreview');
+
+    preview.innerHTML = "";
+
+    if (!file) return;
+
+    const fileType = file.type;
+
+    // ================= IMAGE PREVIEW =================
+    if (fileType.startsWith('image/')) {
+
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+            preview.innerHTML = `
+                <img src="${e.target.result}"
+                     style="width:120px;height:120px;object-fit:cover;border:1px solid #ccc;padding:3px;border-radius:5px;">
+                <br>
+                <small>${file.name}</small>
+            `;
+        };
+
+        reader.readAsDataURL(file);
+    }
+
+    // ================= PDF PREVIEW =================
+    else if (fileType === "application/pdf") {
+
+        preview.innerHTML = `
+            <div style="border:1px solid #ccc;padding:10px;border-radius:5px;width:200px;">
+                📄 <b>PDF File</b><br>
+                <small>${file.name}</small>
+            </div>
+        `;
+    }
+
+    // ================= OTHER FILE =================
+    else {
+        preview.innerHTML = `
+            <div style="color:red;">
+                Unsupported file type
+            </div>
+        `;
+    }
+});
 </script>

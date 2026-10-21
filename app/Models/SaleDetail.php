@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SaleDetail extends Model
 {
+    protected $table = 'sale_details';
+
     protected $fillable = [
         'sale_id',
         'product_id',
@@ -16,19 +19,22 @@ class SaleDetail extends Model
         'narration',
     ];
 
-    //  ADD THIS
-    public function product()
+    protected function casts(): array
+    {
+        return [
+            'qty'   => 'decimal:2',
+            'price' => 'decimal:2',
+            'total' => 'decimal:2',
+        ];
+    }
+
+    public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'product_id');
     }
 
-    public function sale()
+    public function sale(): BelongsTo
     {
         return $this->belongsTo(Sales::class, 'sale_id');
     }
-    // public function saleDetail()
-    // {
-    //     return $this->hasOne(SaleDetail::class, 'sale_id', 'sale_id')
-    //         ->where('product_id', $this->old_product_id); // <-- use value from this model
-    // }
 }

@@ -50,8 +50,8 @@ class OldProductSaleController extends Controller
             'sale_date'    => 'required|date',
             'old_products' => 'required|array|min:1',
             'old_products.*.product_id' => 'required|exists:old_products,id',
-            'old_products.*.qty' => 'required|numeric',
-            'old_products.*.price'      => 'required|numeric|min:0',
+            'old_products.*.qty' => 'required|numeric|min:0.01',
+            'old_products.*.price'      => 'required|numeric|min:0.01',
             'old_products.*.unit'       => 'nullable|string|max:50',
         ]);
         try {
@@ -128,9 +128,9 @@ class OldProductSaleController extends Controller
             'sale_date'    => 'required|date',
             'old_products' => 'required|array|min:1',
             'old_products.*.product_id' => 'required|exists:old_products,id',
-            'old_products.*.qty' => 'required|numeric',
-            'old_products.*.price'      => 'required|numeric|min:0',
-            'old_products.*.unit'       => 'nullable|string|max:50',
+            'old_products.*.qty' => 'required|numeric|min:0.01',
+            'old_products.*.price'      => 'required|numeric|min:0.01',
+            'old_products.*.unit'       => 'nullable|string|min:0.01',
         ]);
 
         try {
@@ -202,52 +202,70 @@ class OldProductSaleController extends Controller
         return view('oldsale.view', compact('sale'));
     }
 
-    // Generate PDF Invoice
-    // public function invoicePdf($id)
-    // {
-    //     $sale = OldProductSale::with('customer', 'details.product')->findOrFail($id);
-
-    //     // Blade view-এ দুইটি রিপোর্ট তৈরি হবে (Challan + Invoice)
-    //     $pdf = Pdf::loadView('oldsale.invoice_pdf', compact('sale'));
-
-    //     // A4 size, portrait orientation
-    //     // width ~ 210mm, height ~ 297mm
-    //     // যদি প্রতিটি রিপোর্ট পৃষ্ঠা হয়, তাহলে আমরা page-break দিয়ে সাজাবো
-    //     $pdf->setPaper('A4');
-    //     // Generate PDF download
-    //     return $pdf->download('old_product_sale_'.$sale->invoice_no.'.pdf');
-    // }
+    
 
     public function invoicePdf($id)
-    {
-        $sale = OldProductSale::with('customer', 'details.product')
-            ->findOrFail($id);
-        $companyInfo = DB::table('company_info')->first();
-        $html = view('oldsale.invoice_pdf', compact('sale', 'companyInfo'))->render();
-        while (ob_get_level()) {
-            ob_end_clean();
-        }
+{
+    $sale = OldProductSale::with('customer', 'details.product')
+        ->findOrFail($id);
 
-        $mpdf = new Mpdf([
-            'mode' => 'utf-8',
-            'format' => 'A4',
-            'orientation' => 'P',
-            'default_font' => 'dejavusans',
-            'margin_top' => 10,
-            'margin_bottom' => 10,
-            'margin_left' => 10,
-            'margin_right' => 10,
-            'autoPageBreak' => true,
-            'setAutoTopMargin' => 'stretch',
-            'setAutoBottomMargin' => 'stretch',
-        ]);
+    $companyInfo = DB::table('company_info')->first();
+    $invoice = DB::table('invoice')->first();
 
-        $mpdf->WriteHTML($html);
-        // 🔥 Output PDF
-        return response()->streamDownload(function () use ($mpdf) {
-            echo $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
-        }, 'old_product_sale_' . $sale->invoice_no . '.pdf');
+    $html = view('oldsale.invoice_pdf', compact('sale', 'companyInfo','invoice'))->render();
+
+    // Clean output buffer (important for mPDF)
+    while (ob_get_level()) {
+        ob_end_clean();
     }
+
+    $mpdf = new Mpdf([
+
+        // ================= BASIC =================
+        'mode' => 'utf-8',
+        'format' => 'A4',
+        'orientation' => 'P',
+
+        // ================= LANGUAGE SUPPORT =================
+        'autoScriptToLang' => true,
+        'autoLangToFont' => true,
+        'useSubstitutions' => true,
+
+        // ================= FONT (SAFE FIX) =================
+        // কোনো external font লাগবে না → error বন্ধ
+        'default_font' => 'dejavusans',
+
+        // যদি future এ font use করতে চান তখন uncomment করবেন
+        /*
+        'fontDir' => [storage_path('fonts')],
+
+        'fontdata' => [
+            'notobengali' => [
+                'R' => 'NotoSansBengali-Regular.ttf',
+                'B' => 'NotoSansBengali-Regular.ttf', // safe fallback
+            ],
+        ],
+
+        'default_font' => 'notobengali',
+        */
+
+        // ================= MARGINS =================
+        'margin_top' => 10,
+        'margin_bottom' => 10,
+        'margin_left' => 10,
+        'margin_right' => 10,
+
+        'autoPageBreak' => true,
+    ]);
+
+    $mpdf->WriteHTML($html);
+
+    $filename = 'old_product_sale_' . ($sale->invoice_no ?? $sale->id) . '.pdf';
+
+    return response()->streamDownload(function () use ($mpdf) {
+        echo $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
+    }, $filename);
+}
 
     public function productsOldAutocomplete(Request $request)
     {

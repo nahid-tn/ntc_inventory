@@ -16,9 +16,10 @@ return new class extends Migration
             Schema::create('purchase_returns', function (Blueprint $table) {
                 $table->id();
                 $table->string('invoice_no');
-                // $table->string('return_no');
                 $table->foreignId('supplier_id')->nullable()->constrained('suppliers')->cascadeOnDelete();
                 $table->date('return_date');
+                $table->integer('transport_cost')->default(0);
+                $table->string('transport_receive')->nullable();
                 $table->text('note')->nullable();
                 $table->decimal('total_amount', 12, 2)->default(0);
                 $table->timestamps();

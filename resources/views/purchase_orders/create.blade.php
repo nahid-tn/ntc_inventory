@@ -152,11 +152,7 @@ function addRow() {
         <input type="hidden" name="products[${rowIndex}][product_id]" class="product_id">
         <small class="text-muted stock_info"></small>
     </td>
-
-    <td>
-        <input type="number" name="products[${rowIndex}][qty]" class="form-control qty" value="1">
-    </td>
-
+    <td><input type="number" name="products[${rowIndex}][qty]" class="form-control qty" value="1"></td>
     <td>
         <select name="products[${rowIndex}][unit]" class="form-control">
             @foreach($units as $unit)
@@ -164,22 +160,10 @@ function addRow() {
             @endforeach
         </select>
     </td>
-
-    <td>
-        <input type="number" name="products[${rowIndex}][price]" class="form-control price" value="0">
-    </td>
-
-    <td>
-        <input type="text" class="form-control row_total" readonly>
-    </td>
-
-    <td>
-        <input type="text" name="products[${rowIndex}][remarks]" class="form-control">
-    </td>
-
-    <td>
-        <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button>
-    </td>
+    <td><input type="number" name="products[${rowIndex}][price]" class="form-control price" value="0"></td>
+    <td><input type="text" class="form-control row_total" readonly></td>
+    <td><input type="text" name="products[${rowIndex}][remarks]" class="form-control"></td>
+    <td><button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>
     `;
 
     rowIndex++;

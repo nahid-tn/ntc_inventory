@@ -55,26 +55,26 @@
                             @forelse ($customers as $index => $customer)
                             <tr>
                                 {{-- ✅ Pagination Serial Fix --}}
-                                <td>
+                                <td style="width: 5%">
                                     {{ $loop->iteration + ($customers->currentPage() - 1) * $customers->perPage() }}
                                 </td>
 
-                                <td>{{ $customer->id }}</td>
-                                <td>{{ $customer->customer_name }}</td>
-                                <td>{{ $customer->mobile }}</td>
-                                <td>{{ $customer->address }}</td>
+                                <td style="width: 10%">{{ $customer->id }}</td>
+                                <td style="width: 20%">{{ $customer->customer_name }}</td>
+                                <td style="width: 10%">{{ $customer->mobile }}</td>
+                                <td style="width: 30%">{{ $customer->address }}</td>
 
-                                <td>
-                                    <a href="{{ route('customerReport.customer_single', $customer->id) }}" class="btn btn-primary">
+                                <td style="width: 20%">
+                                    <a href="{{ route('customerReport.customer_single', $customer->id) }}" class="btn btn-primary btn-sm">
                                         Ledger
                                     </a>
 
-                                    <a href="{{ route('customer.edit', $customer->id) }}" class="btn btn-primary">
+                                    <a href="{{ route('customer.edit', $customer->id) }}" class="btn btn-primary btn-sm">
                                         Edit
                                     </a>
 
                                     <a href="{{ route('customer.delete', $customer->id) }}" 
-                                       class="btn btn-danger"
+                                       class="btn btn-danger btn-sm"
                                        onclick="return confirm('Are you sure?')">
                                         Delete
                                     </a>

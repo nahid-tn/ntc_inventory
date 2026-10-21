@@ -101,13 +101,13 @@
         {{ $item->product->product_name ?? 'N/A' }}
     </td>
 
-    <td>{{ $item->qty }}</td>
+    <td style="text-align: right">{{ number_format($item->qty, 2) }}</td>
 
-    <td>{{ $item->unit }}</td>
+    <td style="text-align: center">{{ $item->unit }}</td>
 
-    <td>{{ number_format($item->price, 2) }}</td>
+    <td style="text-align: right">{{ number_format($item->price, 2) }}</td>
 
-    <td>
+    <td style="text-align: right">
         {{ number_format($item->qty * $item->price, 2) }}
     </td>
 </tr>

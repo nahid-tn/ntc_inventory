@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Chronological Purchase Report</title>
+
 <style>
 body{font-family: Arial,sans-serif;font-size:12px;}
 h2{text-align:center;margin:5px 0;}
@@ -15,7 +16,9 @@ th{background:#f2f2f2;}
 .transaction-space{height:8px;}
 .grand-total{font-weight:bold;background:#eee;}
 </style>
+
 </head>
+
 <body>
 
 <h2>Chronological Purchase Report</h2>
@@ -29,6 +32,7 @@ th{background:#f2f2f2;}
 <p><b>Opening Balance:</b> {{ number_format($openingBalance,2) }}</p>
 
 <table>
+
 <thead>
 <tr>
     <th>SL</th>
@@ -42,24 +46,45 @@ th{background:#f2f2f2;}
     <th>Running Balance</th>
 </tr>
 </thead>
+
 <tbody>
-@foreach($transactions as $tx)
+
+@forelse($transactions as $tx)
+
 <tr>
+
     <td>{{ $loop->iteration }}</td>
-    <td>{{ \Carbon\Carbon::parse($tx['date'])->format('d-m-Y') }}</td>
-    <td>{{ $tx['type'] }}</td>
+
+    <td>
+        {{ isset($tx['date']) ? \Carbon\Carbon::parse($tx['date'])->format('d-m-Y') : '-' }}
+    </td>
+
+    <td>{{ $tx['type'] ?? '-' }}</td>
+
     <td>{{ $tx['reference'] ?? '-' }}</td>
-    <td>{{ number_format($tx['purchase'],2) }}</td>
-    <td>{{ number_format($tx['return'],2) }}</td>
-    <td>{{ number_format($tx['net'],2) }}</td>
-    <td>{{ number_format($tx['paid'],2) }}</td>
-    <td>{{ number_format($tx['running_balance'],2) }}</td>
+
+    <td>{{ number_format($tx['purchase'] ?? 0,2) }}</td>
+    <td>{{ number_format($tx['return'] ?? 0,2) }}</td>
+    <td>{{ number_format($tx['net'] ?? 0,2) }}</td>
+    <td>{{ number_format($tx['paid'] ?? 0,2) }}</td>
+
+    <td>{{ number_format($tx['running_balance'] ?? 0,2) }}</td>
+
 </tr>
 
-@if(($tx['type']=='Purchase' || $tx['type']=='Return') && isset($tx['products']) && count($tx['products'])>0)
+{{-- ================= NESTED TABLE (UNCHANGED DESIGN) ================= --}}
+@if(
+    ($tx['type'] == 'Purchase' || $tx['type'] == 'Return' || $tx['type'] == 'Purchase Invoice' || $tx['type'] == 'Return Invoice')
+    && !empty($tx['products'])
+    && is_countable($tx['products'])
+    && count($tx['products']) > 0
+)
+
 <tr>
     <td colspan="9" style="padding:0;">
+
         <table class="nested-table">
+
             <thead>
                 <tr>
                     <th>SL</th>
@@ -70,26 +95,43 @@ th{background:#f2f2f2;}
                     <th>Total</th>
                 </tr>
             </thead>
+
             <tbody>
+
             @foreach($tx['products'] as $p)
+
                 <tr>
                     <td>{{ $loop->iteration }}</td>
                     <td>{{ $p->product->product_name ?? '-' }}</td>
-                    <td>{{ $p->qty }}</td>
+                    <td>{{ $p->qty ?? 0 }}</td>
                     <td>{{ $p->unit ?? '-' }}</td>
-                    <td>{{ number_format($p->price,2) }}</td>
-                    <td>{{ number_format($p->total,2) }}</td>
+                    <td>{{ number_format($p->price ?? 0,2) }}</td>
+                    <td>{{ number_format($p->total ?? 0,2) }}</td>
                 </tr>
+
             @endforeach
+
             </tbody>
+
         </table>
+
         <div class="transaction-space"></div>
+
     </td>
 </tr>
+
 @endif
 
-@endforeach
+@empty
+
+<tr>
+    <td colspan="9">No Data Found</td>
+</tr>
+
+@endforelse
+
 </tbody>
+
 </table>
 
 <p><b>Closing Balance:</b> {{ number_format($closingBalance,2) }}</p>

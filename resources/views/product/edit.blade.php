@@ -14,7 +14,9 @@
                     <p class="text-green-600">{{ session('success') }}</p>
                 @endif
 
-<form action="{{ route('product.update', $product->id) }}" method="POST">
+<form action="{{ route('product.update', $product->id) }}" 
+      method="POST"
+      enctype="multipart/form-data">
     @csrf
     @method('PUT')
 
@@ -64,15 +66,23 @@
                     <div class="row">
 
                         {{-- Purchase Price --}}
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label>Purchase Price</label>
                             <input type="number" class="form-control"
                                    name="purchase_price" step="0.01"
                                    value="{{ $product->purchase_price }}">
                         </div>
 
+                        {{-- Wholesale Price --}}
+                        <div class="col-md-4 mb-3">
+                            <label>Wholesale Price</label>
+                            <input type="number" class="form-control"
+                                   name="wholesale_price" step="0.01"
+                                   value="{{ $product->wholesale_price }}">
+                        </div>
+
                         {{-- Selling Price --}}
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label>Selling Price</label>
                             <input type="number" class="form-control"
                                    name="selling_price" step="0.01"
@@ -84,6 +94,24 @@
                             <label>Product Description</label>
                             <textarea class="form-control" name="description" rows="4">{{ old('description', $product->description) }}</textarea>
                         </div>
+                        <div class="col-md-6 mb-3">
+    <label>Product Image</label>
+
+    <input type="file"
+           name="image"
+           id="image"
+           class="form-control">
+
+    <br>
+
+    <img id="preview-image"
+         src="{{ $product->image
+                ? asset('uploads/products/'.$product->image)
+                : asset('images/no-image.png') }}"
+         width="200"
+         height="200"
+         style="object-fit:cover;border:1px solid #ddd;">
+</div>
                     <div class="row">
 
                         {{-- Stock --}}
@@ -143,6 +171,25 @@
                 status.value = 'Low Stock';
             } else {
                 status.value = 'In Stock';
+            }
+        });
+
+        document.getElementById('image').addEventListener('change', function(e){
+
+            const file = e.target.files[0];
+
+            if(file){
+
+                const reader = new FileReader();
+
+                reader.onload = function(event){
+
+                    document.getElementById('preview-image')
+                            .src = event.target.result;
+
+                };
+
+                reader.readAsDataURL(file);
             }
         });
     </script>

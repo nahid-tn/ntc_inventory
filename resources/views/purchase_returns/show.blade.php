@@ -90,8 +90,54 @@
                 </tfoot>
             </table>
             <div class="col-md-8">
+                <strong>Transport Cost:</strong>{{ number_format($purchaseReturn->transport_cost, 2) }}
+                </div>
+            <div class="col-md-8">
                 <strong>Note:</strong>{{ $purchaseReturn->note ?? '-' }}
                 </div>
+                <div class="col-md-4">
+    <strong>Transport Challan:</strong><br>
+
+    @if($purchaseReturn->transport_receive)
+
+        @php
+            $file = $purchaseReturn->transport_receive;
+            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+        @endphp
+
+        {{-- ================= IMAGE ================= --}}
+        @if(in_array($ext, ['jpg','jpeg','png','webp']))
+
+            <img src="{{ asset($file) }}"
+                 id="previewImg"
+                 style="width:120px;cursor:pointer;border:1px solid #ccc;padding:3px;border-radius:5px;"
+                 onclick="openImage(this.src)">
+
+            <br>
+
+            <a href="{{ asset($file) }}" download class="btn btn-sm btn-primary mt-1">
+                Download Image
+            </a>
+
+        {{-- ================= PDF ================= --}}
+        @elseif($ext == 'pdf')
+
+            <a href="{{ asset($file) }}" target="_blank" class="btn btn-sm btn-danger">
+                📄 View PDF
+            </a>
+
+            <a href="{{ asset($file) }}" download class="btn btn-sm btn-primary">
+                Download PDF
+            </a>
+
+        @else
+            <span class="text-muted">File not supported</span>
+        @endif
+
+    @else
+        <span class="text-muted">Not provided</span>
+    @endif
+</div>
                 <div class="mt-3">
                     <a href="{{ route('purchase-return.pdf', $purchaseReturn->id) }}" class="btn btn-primary">Download PDF</a>
                     <a href="{{ route('purchase-return.index') }}" class="btn btn-secondary">Back</a>
@@ -104,4 +150,15 @@
         <span> @include('layouts.footer')</span>
     </div>
     </div>
+
+    <script>
+function openImage(src) {
+    document.getElementById('imgModal').style.display = 'block';
+    document.getElementById('modalImg').src = src;
+}
+
+function closeImage() {
+    document.getElementById('imgModal').style.display = 'none';
+}
+</script>
 </x-app-layout>

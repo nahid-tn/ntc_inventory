@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "bff6428c21d7caa09a07c66ca9e64829",
+    "content-hash": "2e1820ffaa783daeea5d121ff523c0f5",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -2913,6 +2913,65 @@
                 "source": "https://github.com/paragonie/random_compat"
             },
             "time": "2020-10-15T08:29:30+00:00"
+        },
+        {
+            "name": "pgt/backup",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Parsons-Green-Media/pgt-backup.git",
+                "reference": "7ef2958e9b08f342ae111eb23483e0ba61f2981c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Parsons-Green-Media/pgt-backup/zipball/7ef2958e9b08f342ae111eb23483e0ba61f2981c",
+                "reference": "7ef2958e9b08f342ae111eb23483e0ba61f2981c",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/console": "^10.0|^11.0|^12.0",
+                "illuminate/filesystem": "^10.0|^11.0|^12.0",
+                "illuminate/support": "^10.0|^11.0|^12.0",
+                "php": "^8.2",
+                "symfony/process": "^6.0|^7.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Pgt\\Backup\\PgtBackupServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Pgt\\Backup\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PG Technologies",
+                    "email": "james@pg-technologies.com"
+                }
+            ],
+            "description": "Simple, zero-dependency database backups to S3 for Laravel applications",
+            "keywords": [
+                "backup",
+                "database",
+                "laravel",
+                "mysql",
+                "postgres",
+                "s3"
+            ],
+            "support": {
+                "issues": "https://github.com/Parsons-Green-Media/pgt-backup/issues",
+                "source": "https://github.com/Parsons-Green-Media/pgt-backup/tree/v1.0.0"
+            },
+            "time": "2026-05-28T13:42:55+00:00"
         },
         {
             "name": "phpoption/phpoption",

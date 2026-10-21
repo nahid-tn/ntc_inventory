@@ -14,7 +14,9 @@ class PurchaseReturn extends Model
         'return_date',
         'note',
         'total_amount',
-        'supplier_id', // যদি supplier_id থাকে
+        'supplier_id',
+        'transport_cost',
+        'transport_receive'
     ];
     protected $casts = [
         'return_date' => 'datetime',

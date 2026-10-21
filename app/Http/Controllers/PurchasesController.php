@@ -22,40 +22,6 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class PurchasesController extends Controller
 {
-    /**
-     * mPDF ইনস্ট্যান্স তৈরি করার হেল্পার
-     */
-    private function createMpdf()
-    {
-        $defaultConfig = (new ConfigVariables())->getDefaults();
-        $fontDirs = $defaultConfig['fontDir'];
-
-        $defaultFontConfig = (new FontVariables())->getDefaults();
-        $fontData = $defaultFontConfig['fontdata'];
-
-        return new Mpdf([
-            'mode' => 'utf-8',
-            'format' => 'A4',
-            'default_font' => 'solaimanlipi',
-            'fontDir' => array_merge($fontDirs, [
-                public_path('fonts'),
-            ]),
-            'fontdata' => $fontData + [
-                'solaimanlipi' => [
-                    'R' => 'SolaimanLipi.ttf',
-                    'B' => 'SolaimanLipi.ttf',
-                    'useOTL' => 0xFF,
-                    'useKashida' => 75,
-                ]
-            ],
-            'margin_top' => 15,
-            'margin_right' => 10,
-            'margin_bottom' => 15,
-            'margin_left' => 10,
-            'tempDir' => storage_path('app/temp'),
-        ]);
-    }
-
     public function index(Request $request)
     {
         $units = Unit::all();
@@ -159,101 +125,20 @@ class PurchasesController extends Controller
         return view('purchase.create', compact('suppliers', 'products', 'units', 'companyInfo'));
     }
 
-    // public function store(Request $request)
-    // {
-    //     $request->validate([
-    //         'supplier_id' => 'required|exists:suppliers,id',
-    //         'date' => 'required|date',
-    //         'payment_method' => 'required|string',
-    //         'products' => 'required|array',
-    //         'products.*.product_id' => 'required|exists:products,id',
-    //         'products.*.qty' => 'required|numeric|min:1',
-    //         'products.*.unit' => 'required|string',
-    //         'products.*.price' => 'required|numeric|min:0',
-    //     ]);
-
-    //     DB::transaction(function () use ($request) {
-
-    //         // Auto Invoice
-    //         $invoice = 'INV-' . str_pad(
-    //             (Purchase::latest('id')->first()?->id ?? 0) + 1,
-    //             6,
-    //             '0',
-    //             STR_PAD_LEFT
-    //         );
-
-    //         // Calculation
-    //         $subtotal = collect($request->products)->sum(fn($p) => $p['qty'] * $p['price']);
-    //         $taxPercent = $request->tax_percentage ?? 0;
-    //         $taxAmount = ($subtotal * $taxPercent) / 100;
-    //         $shipping = $request->shipping_amount ?? 0;
-    //         $total = $subtotal + $taxAmount + $shipping;
-
-    //         // Create Purchase
-    //         $purchase = Purchase::create([
-    //             'Invoice_no' => $invoice,
-    //             'purchase_order_no' => $request->purchase_order_no,
-    //             'supplier_id' => $request->supplier_id,
-    //             'date' => $request->date,
-    //             'subtotal' => $subtotal,
-    //             'tax_percentage' => $taxPercent,
-    //             'tax_amount' => $taxAmount,
-    //             'shipping_amount' => $shipping,
-    //             'total_amount' => $total,
-    //             'payment_method' => $request->payment_method,
-    //         ]);
-
-    //         // Save Details + Update Stock
-    //         foreach ($request->products as $item) {
-    //             PurchaseDetail::create([
-    //                 'purchase_id' => $purchase->id,
-    //                 'product_id' => $item['product_id'],
-    //                 'qty' => $item['qty'],
-    //                 'unit' => $item['unit'],
-    //                 'price' => $item['price'],
-    //                 'total' => $item['qty'] * $item['price'],
-    //             ]);
-
-    //             $product = Product::find($item['product_id']);
-    //             if ($product) {
-    //                 $product->increment('stock', $item['qty']);
-    //             }
-    //         }
-
-    //         // Payment
-    //         $paid = (float) ($request->paid_amount ?? 0);
-    //         if ($paid > 0) {
-    //             SupplierPayment::create([
-    //                 'supplier_id' => $purchase->supplier_id,
-    //                 'purchase_id' => $purchase->id,
-    //                 'payment_date' => $request->date,
-    //                 'amount' => $paid,
-    //                 'BankName' => $request->BankName,
-    //                 'account_number' => $request->account_number,
-    //                 'cheque_number' => $request->cheque_number,
-    //                 'transaction_number' => $request->transaction_number,
-    //                 'note' => 'Initial Payment',
-    //             ]);
-    //         }
-    //     });
-
-    //     return redirect()->route('purchase.index')
-    //         ->with('success', 'Purchase Created Successfully');
-    // }
     public function store(Request $request)
-{
-    $request->validate([
-        'supplier_id' => 'required|exists:suppliers,id',
-        'date' => 'required|date',
-        'payment_method' => 'required|string',
-        'products' => 'required|array',
-        'products.*.product_id' => 'required|exists:products,id',
-        'products.*.qty' => 'required|numeric|min:1',
-        'products.*.unit' => 'required|string',
-        'products.*.price' => 'required|numeric|min:0',
-    ]);
+    {
+        $request->validate([
+            'supplier_id' => 'required|exists:suppliers,id',
+            'date' => 'required|date',
+            'payment_method' => 'required|string',
+            'products' => 'required|array',
+            'products.*.product_id' => 'required|exists:products,id',
+            'products.*.qty' => 'required|numeric|min:1',
+            'products.*.unit' => 'required|string',
+            'products.*.price' => 'required|numeric|min:0',
+        ]);
 
-    DB::transaction(function () use ($request) {
+        DB::transaction(function () use ($request) {
 
         // =====================
         // AUTO INVOICE
@@ -324,14 +209,6 @@ class PurchasesController extends Controller
                 $generator->getBarcode($uniqueCode, $generator::TYPE_CODE_128)
             );
 
-            // =====================
-            // QR CODE (SCAN URL)
-            // =====================
-            // $qrUrl = url('/purchase-item/' . $uniqueCode);
-
-            // $detail->qr_code = base64_encode(
-            //     QrCode::format('png')->size(150)->generate($qrUrl)
-            // );
 
             $detail->save();
 
@@ -344,9 +221,6 @@ class PurchasesController extends Controller
             }
         }
 
-        // =====================
-        // PAYMENT (NO CHANGE)
-        // =====================
         $paid = (float) ($request->paid_amount ?? 0);
 
         if ($paid > 0) {
@@ -375,7 +249,6 @@ class PurchasesController extends Controller
         $products = Product::all();
         $units = Unit::all();
         $companyInfo = CompanyInfo::first();
-        // SupplierPayment থেকে Paid Amount
         $paidAmount = SupplierPayment::where('purchase_id', $purchase->id)
             ->sum('amount');
 
@@ -484,224 +357,144 @@ class PurchasesController extends Controller
             ->with('success', 'Purchase Updated Successfully');
     }
 
-    // public function view($id)
-    // {
-    //     $purchase = Purchase::with('details.product', 'supplier', 'payments')->findOrFail($id);
-    //     $companyInfo = CompanyInfo::first();
-    //     return view('purchase.view', compact('purchase', 'companyInfo'));
-    // }
     public function view($id)
-{
     {
-    $purchase = Purchase::with(
-        'details.product',
-        'supplier',
-        'payments'
-    )->findOrFail($id);
+        {
+        $purchase = Purchase::with(
+            'details.product',
+            'supplier',
+            'payments'
+        )->findOrFail($id);
 
-    $companyInfo = CompanyInfo::first();
+        $companyInfo = CompanyInfo::first();
 
-    $generator = new BarcodeGeneratorPNG();
+        $generator = new BarcodeGeneratorPNG();
 
-    foreach ($purchase->details as $detail) {
+        foreach ($purchase->details as $detail) {
 
-        if (!empty($detail->barcode)) {
+            if (!empty($detail->barcode)) {
 
-            $detail->barcode_image = base64_encode(
-                $generator->getBarcode(
-                    $detail->barcode,
-                    $generator::TYPE_CODE_128
-                )
-            );
+                $detail->barcode_image = base64_encode(
+                    $generator->getBarcode(
+                        $detail->barcode,
+                        $generator::TYPE_CODE_128
+                    )
+                );
+            }
         }
-    }
 
-    return view(
-        'purchase.view',
-        compact(
-            'purchase',
-            'companyInfo'
-        )
-    );
-}
-}
-    // public function downloadPdf($id)
-    // {
-    //     $purchase = Purchase::with('details.product', 'supplier')->findOrFail($id);
-        
-    //     $html = view('purchase.pdf', compact('purchase'))->render();
-        
-    //     $mpdf = $this->createMpdf();
-    //     $mpdf->WriteHTML($html);
-        
-    //     return $mpdf->Output('Purchase_Invoice_' . $purchase->Invoice_no . '.pdf', 'D');
-    // }
-//    public function downloadPdf($id)
-// {
-//     // =========================
-//     // LOAD PURCHASE DATA
-//     // =========================
-//     $purchase = Purchase::with([
-//         'details.product',
-//         'supplier',
-//         'payments'
-//     ])->findOrFail($id);
-//     // =========================
-//     // LOAD COMPANY INFO (IMPORTANT FIX)
-//     // =========================
-//     $companyInfo = CompanyInfo::first();
-//     // =========================
-//     // BARCODE GENERATE
-//     // =========================
-//     $generator = new BarcodeGeneratorPNG();
-//     $barcode = base64_encode(
-//         $generator->getBarcode($purchase->Invoice_no.'|'.$purchase->supplier->supplier_name.'|NTC', $generator::TYPE_CODE_128)
-//     );
-//     // =========================
-//     // RENDER VIEW
-//     // =========================
-//     $html = view('purchase.pdf', compact(
-//         'purchase',
-//         'barcode',
-//         'companyInfo'   // 🔥 MUST PASS
-//     ))->render();
-//     // =========================
-//     // MPDF CONFIG (BANGLA FIXED)
-//     // =========================
-//     $defaultConfig = (new ConfigVariables())->getDefaults();
-//     $fontDirs = $defaultConfig['fontDir'];
-//     $defaultFontConfig = (new FontVariables())->getDefaults();
-//     $fontData = $defaultFontConfig['fontdata'];
-//     $mpdf = new Mpdf([
-//         'mode' => 'utf-8',
-//         'format' => 'A4',
-//         'autoScriptToLang' => true,
-//         'autoLangToFont' => true,
-//         'fontDir' => array_merge($fontDirs, [
-//             public_path('fonts')
-//         ]),
-//         'fontdata' => $fontData + [
-//             'solaimanlipi' => [
-//                 'R' => 'SolaimanLipi.ttf',
-//                 'useOTL' => 0xFF,
-//                 'useKashida' => 75,
-//             ]
-//         ],
-//         'default_font' => 'solaimanlipi',
-//         'margin_left' => 10,
-//         'margin_right' => 10,
-//         'margin_top' => 10,
-//         'margin_bottom' => 10,
-//     ]);
-//     // =========================
-//     // OUTPUT
-//     // =========================
-//     $mpdf->WriteHTML($html);
-//     return $mpdf->Output(
-//         'Purchase_Invoice_' . $purchase->Invoice_no . '.pdf',
-//         'D'
-//     );
-// }
+        return view(
+            'purchase.view',
+            compact(
+                'purchase',
+                'companyInfo'
+            )
+        );
+    }
+    }
+    
+    //Invoice PDF Download
+
     public function downloadPdf($id)
-{
-    // =========================
-    // LOAD PURCHASE DATA
-    // =========================
-    $purchase = Purchase::with([
-        'details.product',
-        'supplier',
-        'payments'
-    ])->findOrFail($id);
+    {
+        // =========================
+        // LOAD PURCHASE DATA
+        // =========================
+        $purchase = Purchase::with([
+            'details.product',
+            'supplier',
+            'payments'
+        ])->findOrFail($id);
 
-    // =========================
-    // LOAD COMPANY INFO
-    // =========================
-    $companyInfo = CompanyInfo::first();
+        // =========================
+        // LOAD COMPANY INFO
+        // =========================
+        $companyInfo = CompanyInfo::first();
 
-    // =========================
-    // INVOICE BARCODE
-    // =========================
-    $generator = new BarcodeGeneratorPNG();
+        // =========================
+        // INVOICE BARCODE
+        // =========================
+        $generator = new BarcodeGeneratorPNG();
 
-    $barcode = base64_encode(
-        $generator->getBarcode(
-            $purchase->Invoice_no . '|' .
-            $purchase->supplier->supplier_name . '|NTC',
-            $generator::TYPE_CODE_128
-        )
-    );
+        $barcode = base64_encode(
+            $generator->getBarcode(
+                $purchase->Invoice_no . '|' .
+                $purchase->supplier->supplier_name . '|NTC',
+                $generator::TYPE_CODE_128
+            )
+        );
 
-    // =========================
-    // PRODUCT BARCODES
-    // =========================
-    foreach ($purchase->details as $detail) {
+        // =========================
+        // PRODUCT BARCODES
+        // =========================
+        foreach ($purchase->details as $detail) {
 
-        if (!empty($detail->barcode)) {
+            if (!empty($detail->barcode)) {
 
-            $detail->barcode_image = base64_encode(
-                $generator->getBarcode(
-                    $detail->barcode,
-                    $generator::TYPE_CODE_128
-                )
-            );
+                $detail->barcode_image = base64_encode(
+                    $generator->getBarcode(
+                        $detail->barcode,
+                        $generator::TYPE_CODE_128
+                    )
+                );
 
-        } else {
+            } else {
 
-            $detail->barcode_image = null;
+                $detail->barcode_image = null;
+            }
         }
+
+        // =========================
+        // RENDER VIEW
+        // =========================
+        $html = view('purchase.pdf', compact(
+            'purchase',
+            'barcode',
+            'companyInfo'
+        ))->render();
+
+        // =========================
+        // MPDF CONFIG
+        // =========================
+        $defaultConfig = (new ConfigVariables())->getDefaults();
+        $fontDirs = $defaultConfig['fontDir'];
+
+        $defaultFontConfig = (new FontVariables())->getDefaults();
+        $fontData = $defaultFontConfig['fontdata'];
+
+        $mpdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'autoScriptToLang' => true,
+            'autoLangToFont' => true,
+
+            'fontDir' => array_merge($fontDirs, [
+                public_path('fonts')
+            ]),
+
+            'fontdata' => $fontData + [
+                'solaimanlipi' => [
+                    'R' => 'SolaimanLipi.ttf',
+                    'useOTL' => 0xFF,
+                    'useKashida' => 75,
+                ]
+            ],
+
+            'default_font' => 'solaimanlipi',
+
+            'margin_left' => 10,
+            'margin_right' => 10,
+            'margin_top' => 10,
+            'margin_bottom' => 10,
+        ]);
+
+        $mpdf->WriteHTML($html);
+
+        return $mpdf->Output(
+            'Purchase_Invoice_' . $purchase->Invoice_no . '.pdf',
+            'D'
+        );
     }
-
-    // =========================
-    // RENDER VIEW
-    // =========================
-    $html = view('purchase.pdf', compact(
-        'purchase',
-        'barcode',
-        'companyInfo'
-    ))->render();
-
-    // =========================
-    // MPDF CONFIG
-    // =========================
-    $defaultConfig = (new ConfigVariables())->getDefaults();
-    $fontDirs = $defaultConfig['fontDir'];
-
-    $defaultFontConfig = (new FontVariables())->getDefaults();
-    $fontData = $defaultFontConfig['fontdata'];
-
-    $mpdf = new Mpdf([
-        'mode' => 'utf-8',
-        'format' => 'A4',
-        'autoScriptToLang' => true,
-        'autoLangToFont' => true,
-
-        'fontDir' => array_merge($fontDirs, [
-            public_path('fonts')
-        ]),
-
-        'fontdata' => $fontData + [
-            'solaimanlipi' => [
-                'R' => 'SolaimanLipi.ttf',
-                'useOTL' => 0xFF,
-                'useKashida' => 75,
-            ]
-        ],
-
-        'default_font' => 'solaimanlipi',
-
-        'margin_left' => 10,
-        'margin_right' => 10,
-        'margin_top' => 10,
-        'margin_bottom' => 10,
-    ]);
-
-    $mpdf->WriteHTML($html);
-
-    return $mpdf->Output(
-        'Purchase_Invoice_' . $purchase->Invoice_no . '.pdf',
-        'D'
-    );
-}
     public function destroy($id)
     {
         DB::transaction(function () use ($id) {
@@ -808,6 +601,8 @@ class PurchasesController extends Controller
         return view('purchase.invoice', compact('purchase'));
     }
 
+    // Purchase Report PDF (Chronological)
+
     public function purchaseReportPdf(Request $request)
     {
         $supplier = null;
@@ -828,7 +623,7 @@ class PurchasesController extends Controller
 
         $openingReturn = PurchaseReturn::when($supplier, fn($q) => $q->where('supplier_id', $supplier->id))
             ->when($from, fn($q) => $q->whereDate('return_date', '<', $from))
-            ->sum('total_amount');
+            ->sum('subtotal');
 
         $openingPayment = SupplierPayment::when($supplier, fn($q) => $q->where('supplier_id', $supplier->id))
             ->when($from, fn($q) => $q->whereDate('payment_date', '<', $from))
@@ -879,7 +674,7 @@ class PurchasesController extends Controller
                 'date' => $r->return_date,
                 'reference' => $r->invoice_no ?? '-',
                 'debit' => 0,
-                'credit' => $r->total_amount,
+                'credit' => $r->subtotal,
                 'products' => $r->items,
             ];
         }
@@ -928,7 +723,7 @@ class PurchasesController extends Controller
             $logo = base64_encode(file_get_contents(public_path('images/logo.png')));
         }
 
-        $html = view('purchase.chronological_report', [
+        $html = view('purchase.chronological_report_pdf', [
             'supplier' => $supplier,
             'transactions' => $transactions,
             'openingBalance' => $openingBalance,
@@ -943,6 +738,375 @@ class PurchasesController extends Controller
 
         return $mpdf->Output($fileName, 'I'); // I = Browser এ দেখাবে, D = Download
     }
-
     
+    public function purchaseGroupReportPdf(Request $request)
+    {
+        try {
+
+            ini_set('memory_limit', '1024M');
+            set_time_limit(0);
+            \Log::info('Purchase Group Report PDF Started');
+
+            /*
+            |--------------------------------------------------------------------------
+            | Filters
+            |--------------------------------------------------------------------------
+            */
+
+            $from_date  = $request->from;
+            $to_date    = $request->to;
+            $supplierId = $request->supplier_id;
+            $productId  = $request->product_id;
+
+            \Log::info([
+                'Supplier' => $supplierId,
+                'Product'  => $productId,
+                'From'     => $from_date,
+                'To'       => $to_date,
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Company
+            |--------------------------------------------------------------------------
+            */
+            $company = CompanyInfo::first();
+            /*
+            |--------------------------------------------------------------------------
+            | Selected Supplier
+            |--------------------------------------------------------------------------
+            */
+            $supplier = null;
+            if (!empty($supplierId)) {
+                $supplier = Supplier::find($supplierId);
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Selected Product
+            |--------------------------------------------------------------------------
+            */
+
+            $product = null;
+            if (!empty($productId)) {
+                $product = Product::find($productId);
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Purchase Query
+            |--------------------------------------------------------------------------
+            */
+            $query = Purchase::with([
+                'supplier',
+                'details.product',
+                'supplierPayments'
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Supplier Filter
+            |--------------------------------------------------------------------------
+            */
+
+            if (!empty($supplierId)) {
+                $query->where('supplier_id', $supplierId);
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Product Filter
+            |--------------------------------------------------------------------------
+            */
+
+            if (!empty($productId)) {
+                $query->whereHas('details', function ($q) use ($productId) {
+                    $q->where('product_id', $productId);
+                });
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | From Date
+            |--------------------------------------------------------------------------
+            */
+
+            if (!empty($from_date)) {
+                $query->whereDate('date', '>=', $from_date);
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | To Date
+            |--------------------------------------------------------------------------
+            */
+
+            if (!empty($to_date)) {
+                $query->whereDate('date', '<=', $to_date);
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Purchase Collection
+            |--------------------------------------------------------------------------
+            */
+            $purchases = $query
+                ->orderBy('date')
+                ->orderBy('id')
+                ->get();
+
+            \Log::info('Total Purchases : '.$purchases->count());
+            if ($purchases->isEmpty()) {
+                return back()->with('error','No Purchase Found.');
+            }
+            /*
+    |--------------------------------------------------------------------------
+    | Opening Balance
+    |--------------------------------------------------------------------------
+    */
+
+    $openingBalance = 0;
+    $transactions = [];
+    $runningBalance = $openingBalance;
+    $grandTotal = 0;
+    $grandPaid = 0;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Transaction Loop
+    |--------------------------------------------------------------------------
+    */
+    foreach ($purchases as $purchase) {
+        $purchaseTotal = (float) ($purchase->total_amount ?? 0);
+        $purchasePaid = (float) $purchase->supplierPayments->sum('amount');
+        $grandTotal += $purchaseTotal;
+        $grandPaid += $purchasePaid;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Product List
+        |--------------------------------------------------------------------------
+        */
+        $products = [];
+        foreach ($purchase->details as $detail) {
+            /*
+            |--------------------------------------------------------------------------
+            | Product Filter
+            |--------------------------------------------------------------------------
+            */
+
+            if (!empty($productId)) {
+                if ($detail->product_id != $productId) {
+                    continue;
+                }
+            }
+
+            $products[] = [
+                'product_id' => $detail->product_id,
+                'name' => optional($detail->product)->product_name ?? '-',
+                'qty' => (float) ($detail->qty ?? 0),
+                'price' => (float) ($detail->price ?? 0),
+                'total' => (float) ($detail->total ?? ($detail->qty * $detail->price)),
+            ];
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Skip Empty Product
+        |--------------------------------------------------------------------------
+        */
+
+        if ($productId && count($products) == 0) {
+            continue;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Running Balance
+        |--------------------------------------------------------------------------
+        */
+
+        $runningBalance += $purchaseTotal;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Transaction Array
+        |--------------------------------------------------------------------------
+        */
+
+        $transactions[] = [
+            'date' => $purchase->date,
+            'reference' => $purchase->Invoice_no ?? '-',
+            'supplier' => optional($purchase->supplier)->supplier_name ?? '-',
+            'debit' => $purchaseTotal,
+            'credit' => $purchasePaid,
+            'running_balance' => $runningBalance,
+            'products' => $products,
+
+        ];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Summary
+    |--------------------------------------------------------------------------
+    */
+
+    $closingBalance = $runningBalance;
+    $grandDue = $grandTotal - $grandPaid;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Debug Log
+    |--------------------------------------------------------------------------
+    */
+
+    \Log::info([
+        'Transactions' => count($transactions),
+        'Grand Total' => $grandTotal,
+        'Grand Paid' => $grandPaid,
+        'Grand Due' => $grandDue,
+    ]);
+    /*
+    |--------------------------------------------------------------------------
+    | Logo
+    |--------------------------------------------------------------------------
+    */
+
+    $logoBase64 = null;
+    $logoPath = public_path('images/logo.png');
+    if (file_exists($logoPath)) {
+        $logoBase64 = base64_encode(file_get_contents($logoPath));
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Values
+    |--------------------------------------------------------------------------
+    */
+
+    $openingBalance = $openingBalance ?? 0;
+    $transactions = $transactions ?? [];
+    $closingBalance = $closingBalance ?? 0;
+    $grandTotal = $grandTotal ?? 0;
+    $grandPaid = $grandPaid ?? 0;
+    $grandDue = $grandDue ?? 0;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Render HTML
+    |--------------------------------------------------------------------------
+    */
+
+    $html = view('purchase.group_report_pdf', compact(
+        'company',
+        'supplier',
+        'product',
+        'from_date',
+        'to_date',
+        'openingBalance',
+        'transactions',
+        'closingBalance',
+        'grandTotal',
+        'grandPaid',
+        'grandDue',
+        'logoBase64'
+    ))->render();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Debug HTML
+    |--------------------------------------------------------------------------
+    */
+
+    file_put_contents(
+        storage_path('debug_purchase_group_report.html'),
+        $html
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | mPDF
+    |--------------------------------------------------------------------------
+    */
+
+    $mpdf = new \Mpdf\Mpdf([
+        'mode' => 'utf-8',
+        'format' => 'A4',
+        'margin_left' => 8,
+        'margin_right' => 8,
+        'margin_top' => 8,
+        'margin_bottom' => 10,
+        'tempDir' => storage_path('app/mpdf'),
+    ]);
+
+    $mpdf->SetTitle('Purchase Group Report');
+    $mpdf->SetAuthor(config('app.name'));
+    $mpdf->SetDisplayMode('fullpage');
+    $mpdf->SetHTMLFooter('
+    <table width="100%" style="font-size:10px;border-top:1px solid #999;">
+    <tr>
+
+    <td width="50%">
+    Printed : '.date('d-m-Y h:i A').'
+    </td>
+
+    <td width="50%" align="right">
+    Page {PAGENO} of {nbpg}
+    </td>
+
+    </tr>
+    </table>
+    ');
+
+    $mpdf->WriteHTML($html);
+    return $mpdf->Output(
+        'Purchase_Group_Report_'.date('Ymd_His').'.pdf',
+        'I'
+    );
+    } catch (\Throwable $e) {
+        \Log::error('Purchase Group Report PDF Error');
+        \Log::error($e->getMessage());
+        \Log::error($e->getTraceAsString());
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile(),
+        ],500);
+    }
+    }
+
+    private function createMpdf()
+    {
+        $defaultConfig = (new ConfigVariables())->getDefaults();
+        $fontDirs = $defaultConfig['fontDir'];
+
+        $defaultFontConfig = (new FontVariables())->getDefaults();
+        $fontData = $defaultFontConfig['fontdata'];
+
+        return new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'default_font' => 'solaimanlipi',
+            'fontDir' => array_merge($fontDirs, [
+                public_path('fonts'),
+            ]),
+            'fontdata' => $fontData + [
+                'solaimanlipi' => [
+                    'R' => 'SolaimanLipi.ttf',
+                    'B' => 'SolaimanLipi.ttf',
+                    'useOTL' => 0xFF,
+                    'useKashida' => 75,
+                ]
+            ],
+            'margin_top' => 15,
+            'margin_right' => 10,
+            'margin_bottom' => 15,
+            'margin_left' => 10,
+            'tempDir' => storage_path('app/temp'),
+        ]);
+    }
 }

@@ -61,5 +61,7 @@ class Purchase extends Model
 {
     return $this->belongsTo(CompanyInfo::class, 'company_info_id');
 }
+
+
     
 }

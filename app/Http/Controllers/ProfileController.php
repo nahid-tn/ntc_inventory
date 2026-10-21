@@ -68,12 +68,16 @@ class ProfileController extends Controller
 
         $filename = time().'_'.$file->getClientOriginalName();
 
+        // ✅ store in public disk
         $path = $file->storeAs('signatures', $filename, 'public');
 
-        $user = Auth::user();
-        $user->signature = 'storage/'.$path;
+        $user = auth()->user();
+
+        // ✅ শুধু relative path রাখবে (BEST PRACTICE)
+        $user->signature = $path;
+
         $user->save();
 
-        return back()->with('success','Signature uploaded successfully!');
+        return back()->with('success', 'Signature uploaded successfully!');
     }
 }

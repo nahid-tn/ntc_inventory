@@ -82,25 +82,21 @@ class ProfitlossController extends Controller
         ));
     }
 
+    
     public function profitLossReport(Request $request)
     {
-        /*
+        $startDate = Carbon::parse(
+            $request->start_date ?? now()->startOfMonth()
+        )->startOfDay();
 
-        Date Range
-
-        */
-        $startDate = $request->start_date
-            ? Carbon::parse($request->start_date)->startOfDay()
-            : Carbon::today()->startOfDay();
-
-        $endDate = $request->end_date
-            ? Carbon::parse($request->end_date)->endOfDay()
-            : Carbon::today()->endOfDay();
+        $endDate = Carbon::parse(
+            $request->end_date ?? now()->endOfMonth()
+        )->endOfDay();
 
         /*
-
-        NEW PRODUCTS
-
+        |--------------------------------------------------------------------------
+        | NEW PRODUCT SALES
+        |--------------------------------------------------------------------------
         */
         $newProductsRaw = DB::table('sale_details as sd')
             ->join('sales as s', 's.id', '=', 'sd.sale_id')
@@ -110,68 +106,109 @@ class ProfitlossController extends Controller
                 'sd.product_id',
                 'p.product_name',
                 'sd.qty',
-                'sd.price',
-                'sd.total',
+                'sd.price as sale_price',
+                'sd.total as sale_total',
                 's.sale_date',
-                DB::raw("(
-                    SELECT pd.price
+
+                DB::raw("
+                (
+                    SELECT
+
+                        pd.price
+
+                        +
+
+                        (
+                            IFNULL(pu.shipping_amount,0)
+
+                            *
+
+                            ((pd.qty * pd.price) /
+
+                            NULLIF(
+                                (
+                                    SELECT SUM(pd2.qty * pd2.price)
+                                    FROM purchase_details pd2
+                                    WHERE pd2.purchase_id = pu.id
+                                ),
+                                0
+                            ))
+
+                        )
+
+                        /
+
+                        NULLIF(pd.qty,0)
+
                     FROM purchase_details pd
-                    INNER JOIN purchases pu ON pu.id = pd.purchase_id
+                    INNER JOIN purchases pu
+                        ON pu.id = pd.purchase_id
+
                     WHERE pd.product_id = sd.product_id
                     AND pu.date <= s.sale_date
-                    ORDER BY pu.date DESC, pd.id DESC
+
+                    ORDER BY pu.date DESC,
+                            pd.id DESC
+
                     LIMIT 1
-                ) as purchase_price")
+
+                ) as actual_cost_price
+                ")
             )
             ->get();
 
+        /*
+        |--------------------------------------------------------------------------
+        | GROUP PRODUCT
+        |--------------------------------------------------------------------------
+        */
         $newProducts = $newProductsRaw
             ->groupBy('product_id')
             ->map(function ($items) {
+
                 $first = $items->first();
+
                 $totalQty = $items->sum('qty');
-                $totalSale = $items->sum('total');
-                $salePrice = $items->avg('price');
+
+                $totalSale = $items->sum('sale_total');
 
                 $totalCost = $items->sum(function ($row) {
-                    $purchasePrice = $row->purchase_price ?? 0;
-                    return $row->qty * $purchasePrice;
-                });
 
-                $avgPurchasePrice = $items->avg(function ($row) {
-                    return $row->purchase_price ?? 0;
-                });
+                    return $row->qty *
+                        ($row->actual_cost_price ?? 0);
 
-                $profitLoss = $totalSale - $totalCost;
+                });
 
                 return (object) [
-                    'product_name'   => $first->product_name,
-                    'purchase_price' => $avgPurchasePrice,
-                    'sale_price'     => $salePrice,
-                    'total_qty'      => $totalQty,
-                    'total_cost'     => $totalCost,
-                    'total_sale'     => $totalSale,
-                    'profit_loss'    => $profitLoss,
+
+                    'product_name' => $first->product_name,
+
+                    'total_qty' => $totalQty,
+
+                    'purchase_price' => round(
+                        $items->avg('actual_cost_price'),
+                        2
+                    ),
+
+                    'sale_price' => round(
+                        $items->avg('sale_price'),
+                        2
+                    ),
+
+                    'total_cost' => $totalCost,
+
+                    'total_sale' => $totalSale,
+
+                    'profit_loss' => $totalSale - $totalCost,
+
                 ];
             })
             ->values();
 
         /*
-
-        NEW PRODUCT TOTALS
-
-        */
-        $newProductTotalQty = $newProducts->sum('total_qty');
-        $newProductTotalPurchase = $newProducts->sum('purchase_price');
-        $newProductTotalCost = $newProducts->sum('total_cost');
-        $newProductTotalSalePrice = $newProducts->sum('sale_price');
-        $newProductTotalSale = $newProducts->sum('total_sale');
-        $newProductTotalProfit = $newProducts->sum('profit_loss');
-
-        /*
-
-        OLD PRODUCTS
-
+        |--------------------------------------------------------------------------
+        | OLD PRODUCT
+        |--------------------------------------------------------------------------
         */
         $oldProducts = DB::table('old_product_sale_details as osd')
             ->join('old_product_sales as os', 'os.id', '=', 'osd.sale_id')
@@ -179,74 +216,109 @@ class ProfitlossController extends Controller
             ->whereBetween('os.sale_date', [$startDate, $endDate])
             ->select(
                 'op.product_name',
-                DB::raw('AVG(osd.buy_price) as purchase_price'),
-                DB::raw('AVG(osd.price) as sale_price'),
+
                 DB::raw('SUM(osd.qty) as total_qty'),
+
                 DB::raw('SUM(osd.qty * osd.buy_price) as total_cost'),
+
                 DB::raw('SUM(osd.subtotal) as total_sale'),
+
+                DB::raw('AVG(osd.buy_price) as purchase_price'),
+
+                DB::raw('AVG(osd.price) as sale_price'),
+
                 DB::raw('SUM(osd.subtotal) - SUM(osd.qty * osd.buy_price) as profit_loss')
             )
             ->groupBy('op.product_name')
             ->get();
 
         /*
-
-        EXPENSE
-
+        |--------------------------------------------------------------------------
+        | EXPENSES
+        |--------------------------------------------------------------------------
         */
         $expenses = DB::table('expenses')
-            ->whereBetween('expense_date', [$startDate, $endDate])
-            ->sum('total');
+        ->whereBetween('expense_date', [$startDate, $endDate])
+        ->sum('total');
+
+    $transport = DB::table('purchases')
+        ->whereBetween('date', [$startDate, $endDate])
+        ->sum('shipping_amount');
+
+    $totalSale = $newProducts->sum('total_sale')
+        + $oldProducts->sum('total_sale');
+
+    $totalCost = $newProducts->sum('total_cost')
+        + $oldProducts->sum('total_cost');
+
+    /*
+    |--------------------------------------------------------------------------
+    | IMPORTANT
+    |--------------------------------------------------------------------------
+    | Shipping already included in product cost
+    | therefore expense table contains ONLY daily expense
+    |--------------------------------------------------------------------------
+    */
+
+    $grossProfit = $totalSale - $totalCost;
+
+    $totalExpense = $expenses;
+
+    $netProfit = $grossProfit - $expenses;
 
         /*
-
-        TRANSPORT
-
+        |--------------------------------------------------------------------------
+        | TOTAL
+        |--------------------------------------------------------------------------
         */
-        $transport = DB::table('purchases')
-            ->whereBetween('date', [$startDate, $endDate])
-            ->sum('shipping_amount');
+        $totalSale =
+            $newProducts->sum('total_sale')
+            +
+            $oldProducts->sum('total_sale');
 
-        /*
+        $totalCost =
+            $newProducts->sum('total_cost')
+            +
+            $oldProducts->sum('total_cost');
 
-        FINAL TOTAL
-
-        */
-        $totalSale = $newProducts->sum('total_sale') + $oldProducts->sum('total_sale');
-        $totalCost = $newProducts->sum('total_cost') + $oldProducts->sum('total_cost');
         $grossProfit = $totalSale - $totalCost;
-        $netProfit = $grossProfit - $expenses - $transport;
 
-        return view('reports.profit_loss', compact(
-            'startDate',
-            'endDate',
-            'newProducts',
-            'oldProducts',
-            'expenses',
-            'transport',
-            'totalSale',
-            'totalCost',
-            'grossProfit',
-            'netProfit',
-            'newProductTotalQty',
-            'newProductTotalPurchase',
-            'newProductTotalCost',
-            'newProductTotalSalePrice',
-            'newProductTotalSale',
-            'newProductTotalProfit'
-        ));
+        $netProfit =
+            $grossProfit
+            -
+            $expenses;
+
+        return view(
+            'reports.profit_loss',
+            compact(
+                'startDate',
+                'endDate',
+                'newProducts',
+                'oldProducts',
+                'expenses',
+                'transport',
+                'totalSale',
+                'totalCost',
+                'grossProfit',
+                'netProfit'
+            )
+        );
     }
+
 
     public function profitLossPdf(Request $request)
     {
-        $startDate = $request->start_date
-            ? Carbon::parse($request->start_date)->startOfDay()
-            : Carbon::today()->startOfDay();
+        $startDate = Carbon::parse($request->start_date ?? now()->startOfMonth()->toDateString())
+            ->startOfDay();
 
-        $endDate = $request->end_date
-            ? Carbon::parse($request->end_date)->endOfDay()
-            : Carbon::today()->endOfDay();
-
+        $endDate = Carbon::parse($request->end_date ?? now()->endOfMonth()->toDateString())
+            ->endOfDay();
+        $company = DB::table('company_info')->first();
+        /*
+        |--------------------------------------------------------------------------
+        | NEW PRODUCTS (FIXED LOGIC SAME AS WEB)
+        |--------------------------------------------------------------------------
+        */
         $newProductsRaw = DB::table('sale_details as sd')
             ->join('sales as s', 's.id', '=', 'sd.sale_id')
             ->join('products as p', 'p.id', '=', 'sd.product_id')
@@ -255,37 +327,45 @@ class ProfitlossController extends Controller
                 'sd.product_id',
                 'p.product_name',
                 'sd.qty',
-                'sd.total',
+                'sd.price as sale_price',
+                'sd.total as sale_total',
                 's.sale_date',
-                DB::raw("(
-                    SELECT pd.price
-                    FROM purchase_details pd
-                    INNER JOIN purchases pu ON pu.id = pd.purchase_id
-                    WHERE pd.product_id = sd.product_id
-                    AND pu.date <= s.sale_date
-                    ORDER BY pu.date DESC, pd.id DESC
-                    LIMIT 1
-                ) as purchase_price")
+
+                DB::raw("
+                    (
+                        SELECT COALESCE(AVG(pd.price), p.purchase_price)
+                        FROM purchase_details pd
+                        JOIN purchases pu ON pu.id = pd.purchase_id
+                        WHERE pd.product_id = sd.product_id
+                        AND pu.date <= s.sale_date
+                    ) as purchase_price
+                ")
             )
             ->get();
 
         $newProducts = $newProductsRaw
             ->groupBy('product_id')
             ->map(function ($items) {
+
                 $first = $items->first();
+
                 $totalQty = $items->sum('qty');
-                $totalSale = $items->sum('total');
+                $totalSale = $items->sum('sale_total');
+
                 $totalCost = $items->sum(function ($row) {
-                    $purchasePrice = $row->purchase_price ?? 0;
-                    return $row->qty * $purchasePrice;
+                    return $row->qty * ($row->purchase_price ?? 0);
                 });
+
+                $profit = $totalSale - $totalCost;
 
                 return (object) [
                     'product_name'   => $first->product_name,
                     'total_qty'      => $totalQty,
                     'total_sale'     => $totalSale,
                     'total_cost'     => $totalCost,
-                    'purchase_price' => $first->purchase_price ?? 0,
+                    'purchase_price' => $items->avg('purchase_price'),
+                    'sale_price'     => $items->avg('sale_price'),
+                    'profit_loss'    => $profit,
                 ];
             })
             ->values();
@@ -303,7 +383,8 @@ class ProfitlossController extends Controller
                 'op.product_name',
                 DB::raw('SUM(osd.qty) as total_qty'),
                 DB::raw('SUM(osd.qty * osd.buy_price) as total_cost'),
-                DB::raw('SUM(osd.subtotal) as total_sale')
+                DB::raw('SUM(osd.subtotal) as total_sale'),
+                DB::raw('SUM(osd.subtotal) - SUM(osd.qty * osd.buy_price) as profit_loss')
             )
             ->groupBy('op.product_name')
             ->get();
@@ -323,47 +404,42 @@ class ProfitlossController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | FINAL CALCULATION
+        | TOTALS
         |--------------------------------------------------------------------------
         */
         $totalSale = $newProducts->sum('total_sale') + $oldProducts->sum('total_sale');
         $totalCost = $newProducts->sum('total_cost') + $oldProducts->sum('total_cost');
-        $totalExpense = $expenses + $transport;
+
         $grossProfit = $totalSale - $totalCost;
-        $netProfitFinal = $grossProfit - $totalExpense;
+        $netProfitFinal = $grossProfit - ($expenses + $transport);
 
         /*
         |--------------------------------------------------------------------------
-        | mPDF - বাংলা সাপোর্ট
+        | mPDF SETUP
         |--------------------------------------------------------------------------
         */
-        $defaultConfig = (new ConfigVariables())->getDefaults();
-        $fontDirs = $defaultConfig['fontDir'];
+        $mpdf = new \Mpdf\Mpdf([
+        'mode' => 'utf-8',
+        'format' => 'A4',
 
-        $defaultFontConfig = (new FontVariables())->getDefaults();
-        $fontData = $defaultFontConfig['fontdata'];
+        'fontDir' => array_merge((new \Mpdf\Config\ConfigVariables())->getDefaults()['fontDir'], [
+            public_path('fonts')
+        ]),
 
-        $mpdf = new Mpdf([
-            'mode' => 'utf-8',
-            'format' => 'A4',
-            'default_font' => 'solaimanlipi',
-            'fontDir' => array_merge($fontDirs, [
-                public_path('fonts'),
-            ]),
-            'fontdata' => $fontData + [
-                'solaimanlipi' => [
-                    'R' => 'SolaimanLipi.ttf',
-                    'B' => 'SolaimanLipi.ttf',
-                    'useOTL' => 0xFF,
-                    'useKashida' => 75,
-                ]
-            ],
-            'margin_top' => 15,
-            'margin_right' => 10,
-            'margin_bottom' => 15,
-            'margin_left' => 10,
-            'tempDir' => storage_path('temp'),
-        ]);
+        'fontdata' => (new \Mpdf\Config\FontVariables())->getDefaults()['fontdata'] + [
+            'solaimanlipi' => [
+                'R' => 'SolaimanLipi.ttf',
+                'B' => 'SolaimanLipi.ttf',
+                'useOTL' => 0xFF,
+                'useKashida' => 75,
+            ]
+        ],
+
+        'default_font' => 'solaimanlipi',
+        'autoScriptToLang' => true,
+        'autoLangToFont' => true,
+        'tempDir' => storage_path('temp'),
+    ]);
 
         $html = view('reports.profit_loss_pdf', compact(
             'startDate',
@@ -374,12 +450,13 @@ class ProfitlossController extends Controller
             'transport',
             'totalSale',
             'totalCost',
-            'totalExpense',
             'grossProfit',
-            'netProfitFinal'
+            'netProfitFinal',
+            'company'
         ))->render();
 
         $mpdf->WriteHTML($html);
+
         return $mpdf->Output('profit-loss-report.pdf', 'I');
     }
 }

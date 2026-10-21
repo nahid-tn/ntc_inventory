@@ -98,15 +98,15 @@ $dueAmount = $purchase->total_amount - $fullAmount;
 @foreach($purchase->details as $item)
 
 <tr>
-    <td>{{ $loop->iteration }}</td>
+    <td  style="text-align:center;"">{{ $loop->iteration }}</td>
     <td>{{ $item->product->product_name }}</td>
     @if($item->barcode_image)
     <td style="text-align:center"> <img src="data:image/png;base64,{{ $item->barcode_image }}" style="height:40px; width:100%;"></td>
     @endif
-    <td>{{ $item->qty }}</td>
-    <td>{{ $item->unit }}</td>
-    <td>{{ number_format($item->price,2) }}</td>
-    <td>{{ number_format($item->total,2) }}</td>
+    <td style="text-align:right;">{{ $item->qty }}</td>
+    <td style="text-align:center;">{{ $item->unit }}</td>
+    <td style="text-align:right;">{{ number_format($item->price,2) }}</td>
+    <td style="text-align:right;">{{ number_format($item->total,2) }}</td>
 </tr>
 @endforeach
 </tbody>
