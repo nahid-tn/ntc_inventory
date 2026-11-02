@@ -20,7 +20,8 @@ class Purchase extends Model
         'tax_amount',
         'shipping_amount',
         'total_amount',
-        'payment_method'
+        'payment_method',
+        'challan_file',
     ];
     protected $casts = [
         'date' => 'date',

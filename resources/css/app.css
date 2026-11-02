@@ -1,3 +1,641 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* =========================================
+   NTC Inventory - Navigation Styles
+   Logo | Menu | User একই লাইনে
+   ========================================= */
+
+[x-cloak] {
+    display: none !important;
+}
+
+/* Main Navbar */
+.ntc-navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+
+    width: 100%;
+    background: #1e3a8a !important;
+    border-bottom: 2px solid #f59e0b;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.12);
+
+    font-family: Figtree, Arial, sans-serif;
+}
+
+.ntc-navbar,
+.ntc-navbar * {
+    box-sizing: border-box;
+}
+
+/* Main Container */
+.ntc-nav-container {
+    width: 100%;
+    max-width: 2000px;
+    min-height: 70px;
+    margin: 0 auto;
+    padding: 8px 32px;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+/* =========================================
+   Logo - বাম পাশে
+   ========================================= */
+
+.ntc-logo {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin: 0;
+    padding: 0;
+    text-decoration: none;
+    margin-left: 20px;
+    flex-shrink: 0;
+}
+
+.ntc-logo img {
+    display: block;
+    width: auto;
+    height: 40px;
+    max-width: 140px;
+    object-fit: contain;
+}
+
+
+/* =========================================
+   Desktop Menu - মাঝখানে
+   ========================================= */
+
+.ntc-desktop-nav {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+}
+
+.ntc-nav-item {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.ntc-nav-button {
+    min-height: 40px;
+    padding: 8px 9px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+
+    color: #ffffff !important;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+
+    cursor: pointer;
+    transition: background-color .18s ease, color .18s ease;
+}
+
+.ntc-nav-button:hover,
+.ntc-nav-button:focus-visible,
+.ntc-nav-button.active {
+    background: #2563eb !important;
+    color: #ffffff !important;
+    outline: none;
+}
+
+.ntc-chevron {
+    display: inline-block;
+    font-size: 15px;
+    line-height: 1;
+    transition: transform .18s ease;
+}
+
+.ntc-chevron.rotated {
+    transform: rotate(180deg);
+}
+
+/* =========================================
+   Dropdown Menu
+   ========================================= */
+
+.ntc-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 1100;
+
+    width: max-content;
+    min-width: 230px;
+    max-width: min(320px, calc(100vw - 24px));
+    max-height: min(70vh, 520px);
+
+    overflow-y: auto;
+    padding: 7px;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+
+    box-shadow: 0 14px 35px rgba(15, 23, 42, .16);
+}
+
+.ntc-dropdown-link {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+
+    color: #334155;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: left;
+    text-decoration: none;
+
+    cursor: pointer;
+}
+
+.ntc-dropdown-link:hover,
+.ntc-dropdown-link:focus-visible,
+.ntc-dropdown-link.active {
+    color: #1d4ed8;
+    background: #eff6ff;
+    outline: none;
+}
+
+/* =========================================
+   Desktop User - ডান পাশে
+   ========================================= */
+
+.ntc-user-desktop {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin: 0;
+}
+
+.ntc-user-menu {
+    position: relative;
+}
+
+.ntc-user-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: 6px 9px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+
+    background: #ffffff;
+    color: #000000;
+
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.ntc-user-button:hover,
+.ntc-user-button:focus-visible {
+    background: #f8fafc;
+    outline: none;
+}
+
+.ntc-avatar {
+    width: 31px;
+    height: 31px;
+    flex: 0 0 31px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+    background: #1d4ed8;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.ntc-user-name {
+    display: inline-block;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    color: #000000;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.ntc-user-dropdown {
+    right: 0;
+    left: auto;
+    min-width: 220px;
+}
+
+/* Desktop User Information */
+.ntc-user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    padding: 10px 12px;
+    margin-bottom: 5px;
+
+    border-bottom: 1px solid #e2e8f0;
+    overflow-wrap: anywhere;
+}
+
+.ntc-user-info strong {
+    color: #0f172a;
+    font-size: 14px;
+}
+
+.ntc-user-info small {
+    color: #64748b;
+    font-size: 12px;
+}
+
+/* =========================================
+   Hamburger Button
+   ========================================= */
+
+.ntc-hamburger {
+    display: none;
+
+    width: 43px;
+    height: 43px;
+    flex: 0 0 43px;
+
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+}
+
+.ntc-hamburger svg {
+    width: 23px;
+    height: 23px;
+}
+
+/* =========================================
+   Mobile Navigation
+   ========================================= */
+
+.ntc-mobile-nav {
+    display: block;
+
+    max-height: calc(100vh - 70px);
+    max-height: calc(100dvh - 70px);
+    overflow-y: auto;
+
+    padding: 10px 16px 18px;
+    border-top: 1px solid #e5e7eb;
+
+    background: #ffffff;
+}
+
+.ntc-mobile-link,
+.ntc-mobile-heading {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+
+    padding: 12px 13px;
+    border: 0;
+    border-radius: 8px;
+
+    background: transparent;
+    color: #334155;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+
+    cursor: pointer;
+}
+
+.ntc-mobile-link:hover,
+.ntc-mobile-heading:hover,
+.ntc-mobile-link.active {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.ntc-mobile-group {
+    margin-top: 4px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.ntc-mobile-submenu {
+    padding: 0 0 8px 13px;
+}
+
+.ntc-mobile-submenu a {
+    display: block;
+    padding: 10px 13px;
+    border-radius: 7px;
+
+    color: #475569;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.ntc-mobile-submenu a:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+/* =========================================
+   Mobile User Information
+   নাম ও ইমেইল কালো থাকবে
+   ========================================= */
+
+.ntc-mobile-user {
+    display: block;
+    margin-top: 15px;
+    padding-top: 12px;
+
+    border-top: 1px solid #e2e8f0;
+    color: #000000 !important;
+}
+
+.ntc-mobile-user-info {
+    display: flex !important;
+    flex-direction: column;
+    gap: 5px;
+
+    padding: 10px 13px 14px;
+    overflow-wrap: anywhere;
+
+    color: #000000 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.ntc-mobile-user-info strong {
+    display: block !important;
+
+    color: #000000 !important;
+    font-size: 16px;
+    line-height: 1.6;
+    font-weight: 700;
+
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.ntc-mobile-user-info small {
+    display: block !important;
+
+    color: #000000 !important;
+    font-size: 13px;
+    line-height: 1.6;
+    font-weight: 400;
+    overflow-wrap: anywhere;
+
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.ntc-mobile-user form {
+    margin: 0;
+}
+
+.ntc-mobile-user .ntc-mobile-link {
+    color: #000000 !important;
+}
+
+.ntc-mobile-user .ntc-mobile-link:hover {
+    background: #eff6ff;
+    color: #1d4ed8 !important;
+}
+
+.ntc-mobile-logout {
+    font-family: inherit;
+    text-align: left;
+}
+
+/* =========================================
+   Tablet: 768px - 1100px
+   ========================================= */
+
+@media (max-width: 1100px) and (min-width: 768px) {
+    .ntc-nav-container {
+        gap: 7px;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .ntc-logo {
+        margin: 0;
+    }
+
+    .ntc-logo img {
+        height: 36px;
+        max-width: 100px;
+    }
+
+    .ntc-desktop-nav {
+        gap: 0;
+    }
+
+    .ntc-nav-button {
+        min-height: 38px;
+        padding: 7px 5px;
+        gap: 3px;
+        font-size: 11px;
+    }
+
+    .ntc-user-button {
+        gap: 5px;
+        padding: 5px 6px;
+    }
+
+    .ntc-avatar {
+        width: 27px;
+        height: 27px;
+        flex-basis: 27px;
+    }
+
+    .ntc-user-name {
+        max-width: 75px;
+        font-size: 12px;
+    }
+}
+
+/* =========================================
+   Mobile: 767px এবং নিচে
+   ========================================= */
+
+@media (max-width: 767px) {
+    .ntc-nav-container {
+        min-height: 62px;
+        padding: 8px 14px;
+        gap: 10px;
+    }
+
+    .ntc-logo {
+        margin-right: auto;
+    }
+
+    .ntc-logo img {
+        height: 40px;
+        max-width: 130px;
+    }
+
+    .ntc-desktop-nav,
+    .ntc-user-desktop {
+        display: none !important;
+    }
+
+    .ntc-hamburger {
+        display: inline-flex;
+        margin-left: auto;
+    }
+
+    .ntc-mobile-nav {
+        max-height: calc(100vh - 62px);
+        max-height: calc(100dvh - 62px);
+    }
+}
+
+/* Desktop: Mobile Menu Hidden */
+@media (min-width: 768px) {
+    .ntc-mobile-nav {
+        display: none !important;
+    }
+
+    .ntc-hamburger {
+        display: none !important;
+    }
+}
+
+/* =========================================
+   Dark Mode
+   Navbar নীল, মোবাইল user text কালো
+   ========================================= */
+
+.dark .ntc-navbar {
+    background: #1e3a8a !important;
+    border-bottom-color: #f59e0b;
+}
+
+.dark .ntc-nav-button {
+    color: #ffffff !important;
+}
+
+.dark .ntc-nav-button:hover,
+.dark .ntc-nav-button.active {
+    color: #ffffff !important;
+    background: #2563eb !important;
+}
+
+.dark .ntc-mobile-nav,
+.dark .ntc-dropdown {
+    background: #ffffff;
+    border-color: #e2e8f0;
+}
+
+.dark .ntc-user-button,
+.dark .ntc-hamburger {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    color: #334155;
+}
+
+.dark .ntc-user-name {
+    color: #000000;
+}
+
+.dark .ntc-dropdown-link {
+    color: #334155;
+}
+
+.dark .ntc-dropdown-link:hover,
+.dark .ntc-dropdown-link.active {
+    color: #1d4ed8;
+    background: #eff6ff;
+}
+
+.dark .ntc-mobile-link,
+.dark .ntc-mobile-heading {
+    color: #334155;
+}
+
+.dark .ntc-mobile-link:hover,
+.dark .ntc-mobile-heading:hover {
+    color: #1d4ed8;
+    background: #eff6ff;
+}
+
+.dark .ntc-user-info {
+    border-color: #e2e8f0;
+}
+
+.dark .ntc-user-info strong {
+    color: #0f172a;
+}
+
+.dark .ntc-user-info small {
+    color: #64748b;
+}
+
+/* Mobile Name & Email: Dark Mode-এও কালো */
+.dark .ntc-mobile-user {
+    border-top-color: #e2e8f0;
+    color: #000000 !important;
+}
+
+.dark .ntc-mobile-user-info,
+.dark .ntc-mobile-user-info strong,
+.dark .ntc-mobile-user-info small {
+    color: #000000 !important;
+}
+
+.dark .ntc-mobile-user .ntc-mobile-link {
+    color: #000000 !important;
+}
+
+.dark .ntc-mobile-user .ntc-mobile-link:hover {
+    color: #1d4ed8 !important;
+    background: #eff6ff;
+}

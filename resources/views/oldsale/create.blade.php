@@ -44,6 +44,7 @@
                                 <th>Unit</th>
                                 <th>Unit Price</th>
                                 <th>Total</th>
+                                <th>Product Note</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -71,6 +72,9 @@
                                 </td>
                                 <td><input type="number" name="old_products[0][price]" class="form-control price" step="0.001"></td>
                                 <td><input type="text" class="form-control row_total" readonly></td>
+                                <td>
+                                    <input type="text" name="old_products[0][note]" class="form-control product_note" maxlength="1000" placeholder="Product note (optional)">
+                                </td>
                                 <td>
                                     <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Remove</button>
                                 </td>
@@ -155,6 +159,9 @@ function addRow() {
         </td>
         <td><input type="number" name="old_products[${rowIndex}][price]" class="form-control price" step="0.001"></td>
         <td><input type="text" class="form-control row_total" readonly></td>
+        <td>
+            <input type="text" name="old_products[${rowIndex}][note]" class="form-control product_note" maxlength="1000" placeholder="Product note (optional)">
+        </td>
         <td>
             <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Remove</button>
         </td>

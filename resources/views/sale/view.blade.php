@@ -64,10 +64,7 @@
         }
 
         $payments = $sale->receivedPayments ?? collect();
-        $receivedTotal = (float) $payments->sum('amount');
-        // paid_amount যদি প্রাথমিক পেমেন্ট সংরক্ষণ করে, সেটি এবং পরবর্তী পেমেন্টের যোগফল
-        $totalPaid = (float) ($sale->paid_amount ?? 0) + $receivedTotal;
-        $dueAmount = (float) ($sale->total_amount ?? 0) - $totalPaid;
+        // Controller থেকে index() এর একই নিয়মে হিসাব করা হয়েছে।
         $oldTotal = 0;
     @endphp
 
@@ -113,6 +110,127 @@
         .sale-detail-page .alert { padding: 9px 12px; border-radius: 6px; margin-bottom: 12px; }
         .sale-detail-page .alert-success { background: #d1e7dd; color: #0f5132; }
         .sale-detail-page .alert-danger { background: #f8d7da; color: #842029; }
+        
+/* ===== বিক্রয় বিবরণ: লেখা বড় ও স্পষ্ট করার CSS ===== */
+
+.sale-detail-page {
+    font-size: 16px !important;
+    line-height: 1.7 !important;
+}
+
+/* প্রতিষ্ঠানের নাম */
+.sale-detail-page .company-head h2 {
+    font-size: 28px !important;
+    line-height: 1.5;
+}
+
+.sale-detail-page .company-head h3 {
+    font-size: 22px !important;
+}
+
+.sale-detail-page .company-head p {
+    font-size: 16px !important;
+    line-height: 1.7;
+}
+
+/* সেকশনের শিরোনাম */
+.sale-detail-page .section-title {
+    font-size: 20px !important;
+    line-height: 1.6;
+    margin: 18px 0 12px;
+}
+
+/* ক্রেতা ও বিক্রয়ের তথ্য */
+.sale-detail-page .detail-grid {
+    gap: 12px 20px;
+    font-size: 16px !important;
+    line-height: 1.8;
+}
+
+.sale-detail-page .detail-item {
+    overflow-wrap: anywhere;
+}
+
+/* টেবিলের লেখা */
+.sale-detail-page table {
+    font-size: 15px !important;
+}
+
+.sale-detail-page th,
+.sale-detail-page td {
+    padding: 10px 12px !important;
+    line-height: 1.7;
+}
+
+/* ইনপুট ও সিলেক্ট */
+.sale-detail-page .form-control,
+.sale-detail-page select,
+.sale-detail-page input {
+    font-size: 15px !important;
+    min-height: 42px;
+    padding: 8px 10px;
+}
+
+/* লেবেল */
+.sale-detail-page label {
+    font-size: 15px !important;
+    margin-bottom: 6px;
+}
+
+/* বাটন */
+.sale-detail-page .btn {
+    font-size: 14px !important;
+    padding: 10px 14px;
+}
+
+/* পেমেন্ট ও হিসাবের টাকার অঙ্ক */
+.sale-detail-page .text-right {
+    font-variant-numeric: tabular-nums;
+}
+
+/* মোবাইল */
+@media (max-width: 640px) {
+    .sale-detail-page {
+        font-size: 15px !important;
+    }
+
+    .sale-detail-page .company-head h2 {
+        font-size: 23px !important;
+    }
+
+    .sale-detail-page .section-title {
+        font-size: 18px !important;
+    }
+
+    .sale-detail-page th,
+    .sale-detail-page td {
+        padding: 8px 10px !important;
+        white-space: nowrap;
+    }
+
+    .sale-detail-page .detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* প্রিন্টের সময়ও লেখা পাঠযোগ্য রাখা */
+@media print {
+    .sale-detail-page {
+        font-size: 12pt !important;
+        line-height: 1.5 !important;
+    }
+
+    .sale-detail-page th,
+    .sale-detail-page td {
+        font-size: 11pt !important;
+        padding: 7px !important;
+    }
+
+    .sale-detail-page .section-title {
+        font-size: 15pt !important;
+    }
+}
+
         @media (max-width: 640px) {
             .sale-detail-page .page-card { padding: 9px !important; }
             .sale-detail-page .detail-grid { grid-template-columns: 1fr; }
@@ -279,10 +397,20 @@
                             <tr><th colspan="5" class="summary-label">মোট পরিশোধযোগ্য:</th><td class="text-right"><strong>{{ toBnNumber($sale->total_amount, 2) }}</strong></td></tr>
                             <tr><th colspan="5" class="summary-label">পরিশোধিত পরিমাণ:</th><td class="text-right paid">{{ toBnNumber($totalPaid, 2) }}</td></tr>
                             @if($dueAmount > 0.009)
-                                <tr><th colspan="5" class="summary-label">বাকি পরিমাণ:</th><td class="text-right negative">{{ toBnNumber($dueAmount, 2) }}</td></tr>
+                                <tr><th colspan="5" class="summary-label">বর্তমান চালানের বাকি:</th><td class="text-right negative">{{ toBnNumber($dueAmount, 2) }}</td></tr>
                             @elseif($dueAmount < -0.009)
                                 <tr><th colspan="5" class="summary-label">অতিরিক্ত পরিশোধ:</th><td class="text-right negative">{{ toBnNumber(abs($dueAmount), 2) }}</td></tr>
+                            @else
+                                <tr><th colspan="5" class="summary-label">বর্তমান চালানের বাকি:</th><td class="text-right paid">{{ toBnNumber(0, 2) }}</td></tr>
                             @endif
+                            <tr>
+                                <th colspan="5" class="summary-label">পূর্বের চালানগুলোর মোট বাকি:</th>
+                                <td class="text-right {{ $previousDue > 0.009 ? 'negative' : 'paid' }}">{{ toBnNumber($previousDue, 2) }}</td>
+                            </tr>
+                            <tr>
+                                <th colspan="5" class="summary-label">কাস্টমারের মোট বাকি (পূর্বের বাকি + বর্তমান চালানের বাকি):</th>
+                                <td class="text-right {{ $grandDue > 0.009 ? 'negative' : 'paid' }}"><strong>{{ toBnNumber($grandDue, 2) }}</strong></td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -305,11 +433,12 @@
 
                 {{-- অ্যাকশন বাটন --}}
                 <div class="actions no-print">
-                    <button type="button" class="btn btn-outline" onclick="history.back()"><i class="fa fa-arrow-left"></i> পিছনে</button>
-                    <a href="{{ route('sale.partialPaymentPdf', $sale->id) }}" target="_blank" class="btn btn-success"><i class="fa fa-file-pdf"></i> পিডিএফ ডাউনলোড</a>
-                    <a href="{{ route('sale.editPartial', $sale->id) }}" class="btn btn-primary"><i class="fa fa-pen"></i> বিক্রয় / পেমেন্ট সম্পাদনা</a>
+                    <button type="button" class="btn btn-secondary" onclick="history.back()"><i class="fa fa-arrow-left"></i> পিছনে</button>
+                    <a href="{{ route('sale.edit', $sale->id) }}" class="btn btn-danger btn-sm" title="সম্পাদনা"> <i class="fas fa-edit"></i> এডিট</a>
+                    <a href="{{ route('sale.partialPaymentPdf', $sale->id) }}" target="_blank" class="btn btn-success"><i class="fa fa-file-pdf"></i> ডাউনলোড</a>
+                    <a href="{{ route('sale.editPartial', $sale->id) }}" class="btn btn-danger"><i class="fa fa-pen"></i> পেমেন্ট এডিট </a>
                     <a href="{{ route('sale.downloadPdf', ['id' => $sale->id, 'print_both' => 'true']) }}" target="_blank" class="btn btn-success"><i class="fa fa-print"></i> বিল ও চালান</a>
-                    <button type="button" class="btn btn-secondary" onclick="window.print()"><i class="fa fa-print"></i> প্রিন্ট</button>
+                    <button type="button" class="btn btn-warning" onclick="window.print()"><i class="fa fa-print"></i> প্রিন্ট</button>
                 </div>
             </div>
         </div>

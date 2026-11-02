@@ -24,6 +24,7 @@ return new class extends Migration
         $table->decimal('shipping_amount', 12, 2)->default(0);
         $table->decimal('total_amount', 12, 2);
         $table->string('payment_method');
+        $table->string('challan_file')->nullable();
         $table->timestamps();
 
     });

@@ -53,6 +53,7 @@ class OldProductSaleController extends Controller
             'old_products.*.qty' => 'required|numeric|min:0.01',
             'old_products.*.price'      => 'required|numeric|min:0.01',
             'old_products.*.unit'       => 'nullable|string|max:50',
+            'old_products.*.note'       => 'nullable|string|max:1000',
         ]);
         try {
             DB::transaction(function() use ($request) {
@@ -91,6 +92,7 @@ class OldProductSaleController extends Controller
                         'buy_price'      => $buyPrice,
                         'subtotal'       => $qtyToSell * $item['price'],
                         'profit'         => $profit,
+                        'note'           => $item['note'] ?? null,
                     ]);
                     $product->decrement('qty', $qtyToSell);
                 }
@@ -130,11 +132,20 @@ class OldProductSaleController extends Controller
             'old_products.*.product_id' => 'required|exists:old_products,id',
             'old_products.*.qty' => 'required|numeric|min:0.01',
             'old_products.*.price'      => 'required|numeric|min:0.01',
-            'old_products.*.unit'       => 'nullable|string|min:0.01',
+            'old_products.*.unit'       => 'nullable|string|max:50',
+            'old_products.*.note'       => 'nullable|string|max:1000',
         ]);
 
         try {
             DB::transaction(function() use ($request, $sale) {
+                // Keep existing product notes available if an older edit form does not submit note fields.
+                $existingNotesByProduct = $sale->details()
+                    ->get()
+                    ->groupBy('old_product_id')
+                    ->map(function ($details) {
+                        return $details->pluck('note')->values();
+                    });
+
                 // revert old stock
                 foreach ($sale->details as $detail) {
                     $product = OldProduct::find($detail->old_product_id);
@@ -163,7 +174,7 @@ class OldProductSaleController extends Controller
                     'payment_method'=> $request->payment_method,
                 ]);
 
-                foreach ($request->old_products as $item) {
+                foreach ($request->old_products as $itemIndex => $item) {
                     $qtyToSell = $item['qty'];
                     $product = OldProduct::findOrFail($item['product_id']);
                     if($qtyToSell > $product->qty){
@@ -171,6 +182,8 @@ class OldProductSaleController extends Controller
                     }
                     $buyPrice = $product->price;
                     $profit = ($item['price'] - $buyPrice) * $qtyToSell;
+                    $oldNotes = $existingNotesByProduct->get($product->id, collect());
+                    $existingNote = $oldNotes->get($itemIndex);
 
                     OldProductSaleDetail::create([
                         'sale_id'        => $sale->id,
@@ -181,6 +194,9 @@ class OldProductSaleController extends Controller
                         'buy_price'      => $buyPrice,
                         'subtotal'       => $qtyToSell * $item['price'],
                         'profit'         => $profit,
+                        'note'           => array_key_exists('note', $item)
+                            ? ($item['note'] !== '' ? $item['note'] : null)
+                            : $existingNote,
                     ]);
 
                     $product->decrement('qty', $qtyToSell);

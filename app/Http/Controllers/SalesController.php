@@ -331,509 +331,501 @@ class SalesController extends Controller
     public function edit($id)
     {
         $sale = Sales::with([
-            'details.product',
             'customer',
-            'oldProductPurchases.details.oldProduct',
-            'receivedPayments'
-        ])->findOrFail($id);
-
-        $units = Unit::all();
-        $lastPayment = $sale->receivedPayments->last();
-        $old_products = OldProduct::all();
-        return view('sale.edit', compact('sale','lastPayment', 'old_products', 'units'));
-    }
-
-    // public function update(Request $request, $id)
-    // {
-    //     $request->validate([
-    //         'invoice_no'     => 'required|string|unique:sales,invoice_no,' . $id,
-    //         'sale_date'      => 'required|date',
-    //         'customer_id'    => 'required|exists:customers,id',
-    //         'payment_method' => 'required',
-    //     ]);
-
-    //     DB::transaction(function () use ($request, $id) {
-
-    //         $sale = Sales::with([
-    //             'details.product',
-    //             'oldProductPurchases.details.oldProduct',
-    //             'receivedPayments'
-    //         ])->findOrFail($id);
-
-    //         foreach ($sale->oldProductPurchases as $purchase) {
-    //             foreach ($purchase->details as $detail) {
-    //                 if ($detail->oldProduct) {
-    //                     $detail->oldProduct->qty -= $detail->qty;
-    //                     if ($detail->oldProduct->qty < 0) {
-    //                         $detail->oldProduct->qty = 0;
-    //                     }
-    //                     $detail->oldProduct->save();
-    //                 }
-    //             }
-    //         }
-
-    //         SaleDetail::where('sale_id', $sale->id)->delete();
-
-    //         foreach ($sale->oldProductPurchases as $purchase) {
-    //             OldProductPurchaseDetail::where('old_product_purchase_id', $purchase->id)->delete();
-    //             $purchase->delete();
-    //         }
-
-    //         $products = $request->products ?? [];
-    //         $oldProducts = $request->old_products ?? [];
-    //         $subtotal = 0;
-
-    //         foreach ($products as $p) {
-    //             if (empty($p['product_id'])) continue;
-    //             $subtotal += ($p['qty'] ?? 0) * ($p['price'] ?? 0);
-    //         }
-
-    //         $oldTotal = 0;
-    //         foreach ($oldProducts as $op) {
-    //             if (empty($op['product_name'])) continue;
-    //             $oldTotal += ($op['qty'] ?? 0) * ($op['price'] ?? 0);
-    //         }
-
-    //         $taxPercent = $request->tax_percentage ?? 0;
-    //         $taxAmount = ($subtotal * $taxPercent) / 100;
-    //         $shipping = $request->shipping_amount ?? 0;
-    //         $discount = $request->discount_amount ?? 0;
-    //         $grandTotal = max($subtotal + $taxAmount + $shipping - $oldTotal - $discount, 0);
-
-    //         $sale->update([
-    //             'invoice_no'      => $request->invoice_no,
-    //             'sale_date'       => $request->sale_date,
-    //             'customer_id'     => $request->customer_id,
-    //             'subtotal'        => $subtotal,
-    //             'tax_percentage'  => $taxPercent,
-    //             'tax_amount'      => $taxAmount,
-    //             'shipping_amount' => $shipping,
-    //             'discount_amount' => $discount,
-    //             'total_amount'    => $grandTotal,
-    //             'note'          => $request->note,
-    //             'body_date'       => $request->body_date,
-    //         ]);
-
-    //         foreach ($products as $p) {
-    //             if (empty($p['product_id'])) continue;
-    //             SaleDetail::create([
-    //                 'sale_id'    => $sale->id,
-    //                 'product_id' => $p['product_id'],
-    //                 'qty'        => $p['qty'] ?? 0,
-    //                 'unit'       => $p['unit'] ?? 'pcs',
-    //                 'price'      => $p['price'] ?? 0,
-    //                 'total'      => ($p['qty'] ?? 0) * ($p['price'] ?? 0),
-    //                 'narration'  => $p['narration'] ?? null,
-    //             ]);
-    //         }
-
-    //         if (!empty($oldProducts)) {
-    //             $purchase = OldProductPurchase::create([
-    //                 'purchase_no'   => 'OP-' . date('Ymd') . '-' . rand(1000, 9999),
-    //                 'sale_id'       => $sale->id,
-    //                 'total'         => $oldTotal,
-    //                 'purchase_date' => $request->sale_date,
-    //             ]);
-
-    //             foreach ($oldProducts as $op) {
-    //                 if (empty($op['product_name'])) continue;
-
-    //                 $oldProduct = OldProduct::firstOrCreate(
-    //                     ['product_name' => $op['product_name']],
-    //                     ['qty' => 0, 'unit' => $op['unit'] ?? 'pcs', 'price' => 0, 'total' => 0]
-    //                 );
-
-    //                 $oldProduct->qty += $op['qty'] ?? 0;
-    //                 $oldProduct->unit = $op['unit'] ?? $oldProduct->unit;
-    //                 $oldProduct->price = $op['price'] ?? $oldProduct->price;
-    //                 $oldProduct->total = $oldProduct->qty * $oldProduct->price;
-    //                 $oldProduct->save();
-
-    //                 OldProductPurchaseDetail::create([
-    //                     'old_product_purchase_id' => $purchase->id,
-    //                     'old_product_id'          => $oldProduct->id,
-    //                     'qty'                     => $op['qty'] ?? 0,
-    //                     'unit'                    => $op['unit'] ?? 'pcs',
-    //                     'price'                   => $op['price'] ?? 0,
-    //                     'total_amount'            => ($op['qty'] ?? 0) * ($op['price'] ?? 0),
-    //                     'narration'               => $op['narration'] ?? null,
-    //                 ]);
-    //             }
-    //         }
-
-    //         $previousReceived = $sale->receivedPayments->sum('amount');
-    //         $newPaid = (float) $request->paid_amount;
-
-    //         if ($newPaid != $previousReceived) {
-    //             $difference = $newPaid - $previousReceived;
-    //             SalesReceived::create([
-    //                 'sale_id'         => $sale->id,
-    //                 'customer_id'     => $sale->customer_id,
-    //                 'received_date'   => $request->sale_date,
-    //                 'amount'          => abs($difference),
-    //                 'received_method' => $request->payment_method,
-    //                 'payment_type'   => $difference > 0 ? 'Adjustment Received' : 'Partial Refund',
-    //                 'tracking_no'     => $request->note,
-    //             ]);
-    //         }
-
-    //         $totalReceived = $sale->refresh()->receivedPayments->sum('amount');
-    //         $sale->update(['due_amount' => $sale->total_amount - $totalReceived]);
-    //     });
-
-    //     return redirect()->route('sale.index')->with('success', 'Sale Updated Successfully');
-    // }
-
-    
-public function update(Request $request, $id)
-{
-    $request->validate([
-        'invoice_no'       => 'required|string|max:255|unique:sales,invoice_no,' . $id,
-        'sale_date'        => 'required|date',
-        'customer_id'      => 'required|exists:customers,id',
-        'payment_method'   => 'required|string',
-        'paid_amount'      => 'nullable|numeric|min:0',
-        'tax_percentage'   => 'nullable|numeric|min:0',
-        'shipping_amount'  => 'nullable|numeric|min:0',
-        'discount_amount'  => 'nullable|numeric|min:0',
-        'body_date'        => 'nullable|date',
-        'note'             => 'nullable|string',
-        'products'         => 'nullable|array',
-        'products.*.product_id' => 'nullable|exists:products,id',
-        'products.*.qty'   => 'nullable|numeric|min:0',
-        'products.*.price' => 'nullable|numeric|min:0',
-        'old_products'     => 'nullable|array',
-        'old_products.*.qty'   => 'nullable|numeric|min:0',
-        'old_products.*.price' => 'nullable|numeric|min:0',
-    ]);
-
-    DB::transaction(function () use ($request, $id) {
-
-        $sale = Sales::with([
             'details.product',
             'oldProductPurchases.details.oldProduct',
             'receivedPayments',
-        ])->lockForUpdate()->findOrFail($id);
+        ])->findOrFail($id);
 
-        /*
-        |--------------------------------------------------------------------------
-        | 1. আগের বিক্রির পণ্যের স্টক ফেরত দিন
-        |--------------------------------------------------------------------------
-        */
+        $units = Unit::all();
+        $old_products = OldProduct::all();
 
-        foreach ($sale->details as $detail) {
-            if ($detail->product) {
-                $detail->product->increment(
-                    'stock',
-                    (float) $detail->qty
-                );
-            }
-        }
+        return view('sale.edit', compact(
+            'sale',
+            'units',
+            'old_products'
+        ));
+    }
 
-        /*
-        |--------------------------------------------------------------------------
-        | 2. আগের Old Product-এর পরিমাণ ফেরত সমন্বয় করুন
-        |--------------------------------------------------------------------------
-        */
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'invoice_no'       => 'required|string|max:255|unique:sales,invoice_no,' . $id,
+            'sale_date'        => 'required|date',
+            'customer_id'      => 'required|exists:customers,id',
+            'payment_method'   => 'required|string',
+            'paid_amount'      => 'nullable|numeric|min:0',
+            'tax_percentage'    => 'nullable|numeric|min:0',
+            'shipping_amount'  => 'nullable|numeric|min:0',
+            'discount_amount'  => 'nullable|numeric|min:0',
+            'body_date'        => 'nullable|date',
+            'note'             => 'nullable|string',
 
-        foreach ($sale->oldProductPurchases as $purchase) {
-            foreach ($purchase->details as $detail) {
-                if ($detail->oldProduct) {
-                    $oldProduct = $detail->oldProduct;
+            'products'              => 'sometimes|array',
+            'products.*.product_id' => 'nullable|exists:products,id',
+            'products.*.qty'        => 'nullable|numeric|min:0',
+            'products.*.price'      => 'nullable|numeric|min:0',
+            'products.*.unit'       => 'nullable|string',
+            'products.*.narration'  => 'nullable|string',
 
-                    $oldProduct->qty = max(
-                        0,
-                        (float) $oldProduct->qty - (float) $detail->qty
+            'old_products'              => 'sometimes|array',
+            'old_products.*.product_name' => 'nullable|string',
+            'old_products.*.qty'          => 'nullable|numeric|min:0',
+            'old_products.*.price'        => 'nullable|numeric|min:0',
+            'old_products.*.unit'         => 'nullable|string',
+            'old_products.*.narration'    => 'nullable|string',
+
+            'tracking_no' => 'nullable|string',
+        ]);
+
+        DB::transaction(function () use ($request, $id) {
+            $sale = Sales::with([
+                'details.product',
+                'oldProductPurchases.details.oldProduct',
+                'receivedPayments',
+            ])
+                ->lockForUpdate()
+                ->findOrFail($id);
+
+            $existingProducts = $sale->details->map(function ($detail) {
+                return [
+                    'product_id' => (int) $detail->product_id,
+                    'qty'        => (float) $detail->qty,
+                    'unit'       => (string) ($detail->unit ?? 'pcs'),
+                    'price'      => (float) $detail->price,
+                    'narration'  => (string) ($detail->narration ?? ''),
+                ];
+            })->values()->all();
+
+            $productsSubmitted = array_key_exists('products', $request->all());
+
+            $products = $productsSubmitted
+                ? $request->input('products', [])
+                : $existingProducts;
+
+            $products = array_values(array_filter($products, function ($p) {
+                return !empty($p['product_id'])
+                    && (float) ($p['qty'] ?? 0) > 0;
+            }));
+
+            $normalizeProducts = function ($items) {
+                $normalized = [];
+
+                foreach ($items as $item) {
+                    $normalized[] = [
+                        'product_id' => (int) ($item['product_id'] ?? 0),
+                        'qty'        => round((float) ($item['qty'] ?? 0), 4),
+                        'unit'       => (string) ($item['unit'] ?? 'pcs'),
+                        'price'      => round((float) ($item['price'] ?? 0), 2),
+                        'narration'  => trim((string) ($item['narration'] ?? '')),
+                    ];
+                }
+
+                usort($normalized, function ($a, $b) {
+                    return strcmp(
+                        json_encode($a),
+                        json_encode($b)
                     );
+                });
 
-                    $oldProduct->total =
-                        (float) $oldProduct->qty *
-                        (float) $oldProduct->price;
+                return $normalized;
+            };
 
-                    $oldProduct->save();
+            $productsChanged = $productsSubmitted
+                && $normalizeProducts($existingProducts)
+                    !== $normalizeProducts($products);
+
+            $existingOldProducts = [];
+
+            foreach ($sale->oldProductPurchases as $purchase) {
+                foreach ($purchase->details as $detail) {
+                    $existingOldProducts[] = [
+                        'product_name' => (string) (
+                            $detail->oldProduct->product_name ?? ''
+                        ),
+                        'qty' => (float) $detail->qty,
+                        'unit' => (string) (
+                            $detail->unit ?? 'pcs'
+                        ),
+                        'price' => (float) $detail->price,
+                        'narration' => (string) (
+                            $detail->narration ?? ''
+                        ),
+                    ];
                 }
             }
 
-            $purchase->details()->delete();
-            $purchase->delete();
-        }
+            $oldProductsSubmitted = array_key_exists(
+                'old_products',
+                $request->all()
+            );
 
-        /*
-        |--------------------------------------------------------------------------
-        | 3. পুরোনো Sale Details মুছে দিন
-        |--------------------------------------------------------------------------
-        */
+            $oldProducts = $oldProductsSubmitted
+                ? $request->input('old_products', [])
+                : $existingOldProducts;
 
-        $sale->details()->delete();
+            $oldProducts = array_values(array_filter(
+                $oldProducts,
+                function ($op) {
+                    return trim($op['product_name'] ?? '') !== '';
+                }
+            ));
 
-        /*
-        |--------------------------------------------------------------------------
-        | 4. নতুন পণ্যের Subtotal হিসাব
-        |--------------------------------------------------------------------------
-        */
+            $normalizeOldProducts = function ($items) {
+                $normalized = [];
 
-        $products = $request->input('products', []);
-        $oldProducts = $request->input('old_products', []);
+                foreach ($items as $item) {
+                    $normalized[] = [
+                        'product_name' => trim(
+                            (string) ($item['product_name'] ?? '')
+                        ),
+                        'qty' => round((float) ($item['qty'] ?? 0), 4),
+                        'unit' => (string) ($item['unit'] ?? 'pcs'),
+                        'price' => round((float) ($item['price'] ?? 0), 2),
+                        'narration' => trim(
+                            (string) ($item['narration'] ?? '')
+                        ),
+                    ];
+                }
 
-        $subtotal = 0;
+                usort($normalized, function ($a, $b) {
+                    return strcmp(
+                        json_encode($a),
+                        json_encode($b)
+                    );
+                });
 
-        foreach ($products as $p) {
-            if (empty($p['product_id'])) {
-                continue;
+                return $normalized;
+            };
+
+            $oldProductsChanged = $oldProductsSubmitted
+                && $normalizeOldProducts($existingOldProducts)
+                    !== $normalizeOldProducts($oldProducts);
+
+            if ($productsChanged) {
+                foreach ($sale->details as $detail) {
+                    if ($detail->product) {
+                        $product = Product::whereKey($detail->product_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($product) {
+                            $product->increment(
+                                'stock',
+                                (float) $detail->qty
+                            );
+                        }
+                    }
+                }
+
+                $sale->details()->delete();
             }
 
-            $qty = (float) ($p['qty'] ?? 0);
-            $price = (float) ($p['price'] ?? 0);
+            if ($oldProductsChanged) {
+                foreach ($sale->oldProductPurchases as $purchase) {
+                    foreach ($purchase->details as $detail) {
+                        if ($detail->oldProduct) {
+                            $oldProduct = OldProduct::whereKey(
+                                $detail->old_product_id
+                            )
+                                ->lockForUpdate()
+                                ->first();
 
-            $subtotal += $qty * $price;
-        }
+                            if ($oldProduct) {
+                                $oldProduct->qty = max(
+                                    0,
+                                    (float) $oldProduct->qty
+                                        - (float) $detail->qty
+                                );
 
-        /*
-        |--------------------------------------------------------------------------
-        | 5. পুরোনো ব্যাটারি / পণ্যের মোট মূল্য
-        |--------------------------------------------------------------------------
-        */
+                                $oldProduct->total = round(
+                                    (float) $oldProduct->qty
+                                        * (float) $oldProduct->price,
+                                    2
+                                );
 
-        $oldTotal = 0;
+                                $oldProduct->save();
+                            }
+                        }
+                    }
 
-        foreach ($oldProducts as $op) {
-            if (empty(trim($op['product_name'] ?? ''))) {
-                continue;
+                    $purchase->details()->delete();
+                    $purchase->delete();
+                }
             }
 
-            $qty = (float) ($op['qty'] ?? 0);
-            $price = (float) ($op['price'] ?? 0);
+            $subtotal = 0;
+            foreach ($products as $p) {
+                $qty = (float) ($p['qty'] ?? 0);
+                $price = (float) ($p['price'] ?? 0);
 
-            $oldTotal += $qty * $price;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | 6. Tax, Shipping, Discount ও Grand Total
-        |--------------------------------------------------------------------------
-        */
-
-        $taxPercent = (float) $request->input('tax_percentage', 0);
-        $taxAmount = round(($subtotal * $taxPercent) / 100, 2);
-        $shipping = (float) $request->input('shipping_amount', 0);
-        $discount = (float) $request->input('discount_amount', 0);
-
-        $grandTotal = round(max(
-            $subtotal + $taxAmount + $shipping - $oldTotal - $discount,
-            0
-        ), 2);
-
-        /*
-        |--------------------------------------------------------------------------
-        | 7. Sale আপডেট
-        |--------------------------------------------------------------------------
-        */
-
-        $sale->update([
-            'invoice_no'      => $request->invoice_no,
-            'sale_date'       => $request->sale_date,
-            'customer_id'     => $request->customer_id,
-            'subtotal'        => round($subtotal, 2),
-            'tax_percentage'  => $taxPercent,
-            'tax_amount'      => $taxAmount,
-            'shipping_amount' => $shipping,
-            'discount_amount' => $discount,
-            'total_amount'    => $grandTotal,
-            'note'            => $request->note,
-            'body_date'       => $request->body_date,
-            'payment_method'  => $request->payment_method,
-        ]);
-
-        /*
-        |--------------------------------------------------------------------------
-        | 8. নতুন Sale Details তৈরি এবং স্টক কমানো
-        |--------------------------------------------------------------------------
-        */
-
-        foreach ($products as $p) {
-            if (empty($p['product_id'])) {
-                continue;
+                $subtotal += $qty * $price;
             }
 
-            $product = Product::whereKey($p['product_id'])
-                ->lockForUpdate()
-                ->firstOrFail();
+            $subtotal = round($subtotal, 2);
+            $oldTotal = 0;
 
-            $qty = (float) ($p['qty'] ?? 0);
-            $price = (float) ($p['price'] ?? 0);
-
-            if ($qty <= 0) {
-                continue;
-            }
-
-            SaleDetail::create([
-                'sale_id'    => $sale->id,
-                'product_id' => $product->id,
-                'qty'        => $qty,
-                'unit'       => $p['unit'] ?? 'pcs',
-                'price'      => $price,
-                'total'      => round($qty * $price, 2),
-                'narration'  => $p['narration'] ?? null,
-            ]);
-
-            $product->decrement('stock', $qty);
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | 9. Old Product Purchase তৈরি
-        |--------------------------------------------------------------------------
-        */
-
-        $validOldProducts = array_filter(
-            $oldProducts,
-            fn ($op) => !empty(trim($op['product_name'] ?? ''))
-        );
-
-        if (count($validOldProducts) > 0) {
-            $purchase = OldProductPurchase::create([
-                'purchase_no'   => 'OP-' . now()->format('YmdHis') . '-' . $sale->id,
-                'sale_id'       => $sale->id,
-                'total'         => round($oldTotal, 2),
-                'purchase_date' => $request->sale_date,
-            ]);
-
-            foreach ($validOldProducts as $op) {
-                $name = trim($op['product_name']);
+            foreach ($oldProducts as $op) {
                 $qty = (float) ($op['qty'] ?? 0);
                 $price = (float) ($op['price'] ?? 0);
-                $unit = $op['unit'] ?? 'pcs';
 
-                $oldProduct = OldProduct::firstOrCreate(
-                    ['product_name' => $name],
-                    [
-                        'qty'   => 0,
-                        'unit'  => $unit,
-                        'price' => 0,
-                        'total' => 0,
-                    ]
+                $oldTotal += $qty * $price;
+            }
+
+            $oldTotal = round($oldTotal, 2);
+            $taxPercent = (float) $request->input(
+                'tax_percentage',
+                $sale->tax_percentage ?? 0
+            );
+
+            $taxAmount = round(
+                ($subtotal * $taxPercent) / 100,
+                2
+            );
+
+            $shipping = (float) $request->input(
+                'shipping_amount',
+                $sale->shipping_amount ?? 0
+            );
+
+            $discount = (float) $request->input(
+                'discount_amount',
+                $sale->discount_amount ?? 0
+            );
+
+            $grandTotal = round(max(
+                $subtotal
+                    + $taxAmount
+                    + $shipping
+                    - $oldTotal
+                    - $discount,
+                0
+            ), 2);
+
+            $sale->fill([
+                'invoice_no'      => $request->input(
+                    'invoice_no',
+                    $sale->invoice_no
+                ),
+                'sale_date'       => $request->input(
+                    'sale_date',
+                    $sale->sale_date
+                ),
+                'customer_id'     => $request->input(
+                    'customer_id',
+                    $sale->customer_id
+                ),
+                'subtotal'        => $subtotal,
+                'tax_percentage'  => $taxPercent,
+                'tax_amount'      => $taxAmount,
+                'shipping_amount' => $shipping,
+                'discount_amount' => $discount,
+                'total_amount'    => $grandTotal,
+                'note'            => $request->input('note', $sale->note),
+                'body_date'       => $request->input(
+                    'body_date',
+                    $sale->body_date
+                ),
+            ]);
+
+            if ($sale->isDirty()) {
+                $sale->save();
+            }
+
+            if ($productsChanged) {
+                foreach ($products as $p) {
+                    $qty = (float) ($p['qty'] ?? 0);
+                    $price = (float) ($p['price'] ?? 0);
+
+                    if (empty($p['product_id']) || $qty <= 0) {
+                        continue;
+                    }
+
+                    $product = Product::whereKey($p['product_id'])
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    SaleDetail::create([
+                        'sale_id'    => $sale->id,
+                        'product_id' => $product->id,
+                        'qty'        => $qty,
+                        'unit'       => $p['unit'] ?? 'pcs',
+                        'price'      => $price,
+                        'total'      => round($qty * $price, 2),
+                        'narration'  => $p['narration'] ?? null,
+                    ]);
+
+                    $product->decrement('stock', $qty);
+                }
+            }
+
+            if ($oldProductsChanged && count($oldProducts) > 0) {
+                $purchase = OldProductPurchase::create([
+                    'purchase_no' => 'OP-'
+                        . now()->format('YmdHis')
+                        . '-'
+                        . $sale->id,
+
+                    'sale_id'       => $sale->id,
+                    'total'         => $oldTotal,
+                    'purchase_date' => $request->input(
+                        'sale_date',
+                        $sale->sale_date
+                    ),
+                ]);
+
+                foreach ($oldProducts as $op) {
+                    $name = trim($op['product_name']);
+                    $qty = (float) ($op['qty'] ?? 0);
+                    $price = (float) ($op['price'] ?? 0);
+                    $unit = $op['unit'] ?? 'pcs';
+
+                    if ($qty <= 0) {
+                        continue;
+                    }
+                    $oldProduct = OldProduct::firstOrCreate(
+                        ['product_name' => $name],
+                        [
+                            'qty'   => 0,
+                            'unit'  => $unit,
+                            'price' => 0,
+                            'total' => 0,
+                        ]
+                    );
+
+                    $oldProduct->qty =
+                        (float) $oldProduct->qty + $qty;
+                    $oldProduct->unit = $unit;
+                    $oldProduct->price = $price;
+                    $oldProduct->total = round(
+                        (float) $oldProduct->qty * $price,
+                        2
+                    );
+
+                    $oldProduct->save();
+                    OldProductPurchaseDetail::create([
+                        'old_product_purchase_id' => $purchase->id,
+                        'old_product_id'          => $oldProduct->id,
+                        'qty'                     => $qty,
+                        'unit'                    => $unit,
+                        'price'                   => $price,
+                        'total_amount'             => round(
+                            $qty * $price,
+                            2
+                        ),
+                        'narration' => $op['narration'] ?? null,
+                    ]);
+                }
+            }
+
+            if ($request->exists('paid_amount')) {
+                $previousReceived = round(
+                    (float) SalesReceived::where('sale_id', $sale->id)
+                        ->sum('amount'),
+                    2
                 );
 
-                $oldProduct->qty =
-                    (float) $oldProduct->qty + $qty;
+                $newPaid = round(
+                    (float) $request->input('paid_amount', 0),
+                    2
+                );
 
-                $oldProduct->unit = $unit;
-                $oldProduct->price = $price;
-                $oldProduct->total =
-                    (float) $oldProduct->qty * $price;
+                $difference = round(
+                    $newPaid - $previousReceived,
+                    2
+                );
 
-                $oldProduct->save();
-
-                OldProductPurchaseDetail::create([
-                    'old_product_purchase_id' => $purchase->id,
-                    'old_product_id'          => $oldProduct->id,
-                    'qty'                     => $qty,
-                    'unit'                    => $unit,
-                    'price'                   => $price,
-                    'total_amount'             => round($qty * $price, 2),
-                    'narration'               => $op['narration'] ?? null,
-                ]);
+                if (abs($difference) >= 0.01) {
+                    SalesReceived::create([
+                        'sale_id'         => $sale->id,
+                        'customer_id'     => $sale->customer_id,
+                        'received_date'   => $request->input(
+                            'sale_date',
+                            $sale->sale_date
+                        ),
+                        'amount'          => $difference,
+                        'received_method' => $request->input('payment_method'),
+                        'payment_type'    => $difference < 0
+                            ? 'Refund Adjustment'
+                            : (
+                                $newPaid >= $grandTotal
+                                    ? 'Full'
+                                    : 'Partial Payment'
+                            ),
+                        'tracking_no' => $request->input('tracking_no'),
+                    ]);
+                }
             }
-        }
 
-        /*
-        |--------------------------------------------------------------------------
-        | 10. Payment হিসাব ও Adjustment
-        |--------------------------------------------------------------------------
-        |
-        | paid_amount = Edit ফর্মে দেখানো মোট পরিশোধিত টাকা।
-        | আগের পেমেন্টের তুলনায় পার্থক্যটুকু নতুন রেকর্ড হবে।
-        */
+        });
 
-        $previousReceived = round(
-            (float) SalesReceived::where('sale_id', $sale->id)
-                ->sum('amount'),
-            2
-        );
+        return redirect()
+            ->route('sale.index')
+            ->with('success', 'Sale Updated Successfully');
+    }
 
-        $newPaid = round(
-            (float) $request->input('paid_amount', $previousReceived),
-            2
-        );
+// public function view($id)
+// {
+//     $sale = Sales::with([
+//         'customer',
+//         'details.product',
+//         'oldProductPurchases.details.oldProduct',
+//         'receivedPayments',
+//     ])->findOrFail($id);
 
-        $difference = round($newPaid - $previousReceived, 2);
+//     $company = CompanyInfo::getInfo();
+//     $receivedTotal = (float) $sale->receivedPayments->sum('amount');
+//     $totalPaid = $sale->receivedPayments->isNotEmpty()
+//         ? $receivedTotal
+//         : (float) $sale->paid_amount;
+//     $dueAmount = max(
+//         0,
+//         (float) $sale->total_amount - $totalPaid
+//     );
 
-        if (abs($difference) >= 0.01) {
-            SalesReceived::create([
-                'sale_id'         => $sale->id,
-                'customer_id'     => $sale->customer_id,
-                'received_date'   => $request->sale_date,
-                'amount'          => $difference,
-                'received_method' => $request->payment_method,
-                'payment_type'    => $difference > 0
-                    ? ($newPaid >= $grandTotal ? 'Full' : 'Partial Payment')
-                    : 'Refund Adjustment',
-                'tracking_no'     => $request->input('tracking_no'),
-            ]);
-        }
+//     $previousSales = Sales::where('customer_id', $sale->customer_id)
+//         ->where('id', '!=', $sale->id)
+//         ->get(['id', 'total_amount', 'paid_amount', 'due_amount']);
 
-        /*
-        |--------------------------------------------------------------------------
-        | 11. সর্বশেষ পেমেন্টের যোগফল দিয়ে Paid / Due আপডেট
-        |--------------------------------------------------------------------------
-        */
+//     $previousDue = 0;
 
-        $totalReceived = round(
-            (float) SalesReceived::where('sale_id', $sale->id)
-                ->sum('amount'),
-            2
-        );
+//     foreach ($previousSales as $previousSale) {
+//         $previousReceived = (float) \App\Models\SalesReceived::where(
+//             'sale_id',
+//             $previousSale->id
+//         )->sum('amount');
 
-        $dueAmount = round($grandTotal - $totalReceived, 2);
+//         if (
+//             \App\Models\SalesReceived::where(
+//                 'sale_id',
+//                 $previousSale->id
+//             )->exists()
+//         ) {
+//             $previousPaid = $previousReceived;
+//         } else {
+//             $previousPaid = (float) $previousSale->paid_amount;
+//         }
 
-        $sale->update([
-            'paid_amount'   => $totalReceived,
-            'due_amount'    => $dueAmount,
-            'received_type' => $totalReceived >= $grandTotal
-                ? 'Full'
-                : ($totalReceived > 0 ? 'Partial Payment' : 'Unpaid'),
-        ]);
-    });
+//         $previousSaleDue = max(
+//             0,
+//             (float) $previousSale->total_amount - $previousPaid
+//         );
 
-    return redirect()
-        ->route('sale.index')
-        ->with('success', 'Sale Updated Successfully');
-}
+//         $previousDue += $previousSaleDue;
+//     }
 
+//     $grandDue = $previousDue + $dueAmount;
+//     return view('sale.view', compact(
+//         'sale',
+//         'company',
+//         'totalPaid',
+//         'dueAmount',
+//         'previousDue',
+//         'grandDue'
+//     ));
+// }
 
-    // public function view($id)
-    // {
-    //     $sale = Sales::with([
-    //         'customer',
-    //         'details.product',
-    //         'oldProductPurchases.details.oldProduct',
-    //         'receivedPayments',
-    //     ])->findOrFail($id);
-
-    //     $company = CompanyInfo::getInfo();
-    //     $receivedTotal = (float) $sale->receivedPayments->sum('amount');
-    //     $totalPaid = (float) $sale->paid_amount + $receivedTotal;
-    //     $dueAmount = (float) $sale->total_amount - $totalPaid;
-    //     $previousDue = (float) Sales::where(
-    //         'customer_id',
-    //         $sale->customer_id
-    //     )
-    //         ->where('id', '!=', $sale->id)
-    //         ->sum('due_amount');
-
-    //     $grandDue = $dueAmount + $previousDue;
-    //     return view('sale.view', compact(
-    //         'sale',
-    //         'company',
-    //         'totalPaid',
-    //         'dueAmount',
-    //         'previousDue',
-    //         'grandDue'
-    //     ));
-    // }
-
-    
-public function view($id)
+    public function view($id)
 {
     $sale = Sales::with([
         'customer',
@@ -844,56 +836,51 @@ public function view($id)
 
     $company = CompanyInfo::getInfo();
 
-    // বর্তমান চালানের সঙ্গে সরাসরি যুক্ত পেমেন্ট
+    /*
+    |--------------------------------------------------------------------------
+    | বর্তমান চালানের হিসাব
+    |--------------------------------------------------------------------------
+    | index() এর মতো:
+    | মোট পরিশোধ = paid_amount + receivedPayments এর মোট amount
+    */
     $receivedTotal = (float) $sale->receivedPayments->sum('amount');
 
-    // SalesReceived রেকর্ড থাকলে সেটির হিসাব ব্যবহার হবে।
-    // না থাকলে sales.paid_amount ব্যবহার হবে, যাতে একই পেমেন্ট
-    // দুবার গণনা না হয়।
-    $totalPaid = $sale->receivedPayments->isNotEmpty()
-        ? $receivedTotal
-        : (float) $sale->paid_amount;
+    $totalPaid = (float) ($sale->paid_amount ?? 0) + $receivedTotal;
 
-    // বর্তমান চালানের বাকি
-    $dueAmount = max(
-        0,
-        (float) $sale->total_amount - $totalPaid
-    );
+    $dueAmount = (float) $sale->total_amount - $totalPaid;
 
-    // একই ক্রেতার অন্য চালানগুলোর বাকি
-    $previousSales = Sales::where('customer_id', $sale->customer_id)
+    /*
+    |--------------------------------------------------------------------------
+    | একই কাস্টমারের পূর্বের চালানগুলোর বাকি
+    |--------------------------------------------------------------------------
+    */
+    $previousSales = Sales::with('receivedPayments')
+        ->where('customer_id', $sale->customer_id)
         ->where('id', '!=', $sale->id)
-        ->get(['id', 'total_amount', 'paid_amount', 'due_amount']);
+        ->get();
 
     $previousDue = 0;
 
     foreach ($previousSales as $previousSale) {
-        // পূর্বের চালানের পেমেন্ট রেকর্ড আছে কি না যাচাই
-        $previousReceived = (float) \App\Models\SalesReceived::where(
-            'sale_id',
-            $previousSale->id
-        )->sum('amount');
 
-        if (
-            \App\Models\SalesReceived::where(
-                'sale_id',
-                $previousSale->id
-            )->exists()
-        ) {
-            $previousPaid = $previousReceived;
-        } else {
-            $previousPaid = (float) $previousSale->paid_amount;
-        }
+        $previousPaidFromSale = (float) ($previousSale->paid_amount ?? 0);
 
-        $previousSaleDue = max(
-            0,
-            (float) $previousSale->total_amount - $previousPaid
-        );
+        $previousPaidFromReceived = (float) $previousSale
+            ->receivedPayments
+            ->sum('amount');
+
+        $previousTotalPaid = $previousPaidFromSale + $previousPaidFromReceived;
+
+        $previousSaleDue = (float) $previousSale->total_amount - $previousTotalPaid;
 
         $previousDue += $previousSaleDue;
     }
 
-    // ক্রেতার সর্বমোট বাকি
+    /*
+    |--------------------------------------------------------------------------
+    | কাস্টমারের সর্বমোট বাকি
+    |--------------------------------------------------------------------------
+    */
     $grandDue = $previousDue + $dueAmount;
 
     return view('sale.view', compact(
@@ -905,7 +892,6 @@ public function view($id)
         'grandDue'
     ));
 }
-
 
     public function editPartial($id)
     {
@@ -1106,8 +1092,6 @@ public function downloadPdf($id)
         $previousDue += max(0, $net - $paid);
     }
     $previousDue = (float) $previousDue;
-
-    // mPDF Configuration
     $mpdf = new \Mpdf\Mpdf([
         'mode'             => 'utf-8',
         'format'           => 'A4',
@@ -1289,10 +1273,6 @@ public function partialPaymentPdf($id)
     $netTotal = ($sale->total_amount ?? 0) - $discount;
     $totalPaid = ($sale->paid_amount ?? 0) + $receivedTotal;
     $currentDue = $netTotal - $totalPaid;
-
-    // =========================
-    // PREVIOUS DUE (ALL OLD SALES)
-    // =========================
     $previousSales = Sales::where('customer_id', $sale->customer_id)
         ->where('id', '!=', $sale->id)
         ->get();
@@ -1305,7 +1285,6 @@ public function partialPaymentPdf($id)
         $prevDiscount = $prev->discount_amount ?? 0;
         $prevNet = ($prev->total_amount ?? 0) - $prevDiscount;
         $prevPaid = ($prev->paid_amount ?? 0) + $prevReceived;
-        // $previousDue += max(0, $prevNet - $prevPaid);
         $previousDue += ($prevNet - $prevPaid);
     }
 
@@ -1345,7 +1324,7 @@ public function partialPaymentPdf($id)
             $paid = ($s->paid_amount ?? 0) + $received;
             return [
                 'invoice' => $s->invoice_no,
-                'date'    => $s->sale_date, // Carbon instance
+                'date'    => $s->sale_date,
                 'total'   => $net,
                 'paid'    => $paid,
                 'due'     => ($net - $paid),
@@ -1353,14 +1332,10 @@ public function partialPaymentPdf($id)
             ];
         });
 
-    // ⭐ Calculating totals for last sales data
     $totalSaleAmount = $lastSalesData->sum('total');
     $totalSalePaid   = $lastSalesData->sum('paid');
     $totalSaleDue    = $lastSalesData->sum('due');
 
-    // =========================
-    // VIEW
-    // =========================
     $html = view('sale.partial_payment_pdf', [
         'sale'          => $sale,
         'companyInfo'   => $companyInfo,

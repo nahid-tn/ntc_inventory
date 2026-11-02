@@ -26,7 +26,7 @@
                         </div>
                     @endif
 
-                    <form action="{{ route('purchase.create') }}" method="post">
+                    <form action="{{ route('purchase.create') }}" method="post" enctype="multipart/form-data">
                         @csrf
                         {{-- Invoice & Date --}}
                         <div class="row">
@@ -49,6 +49,27 @@
                             <input type="hidden" name="supplier_id" id="supplier_id">
                             <small id="supplier_info"></small>
                         </div>
+                        {{-- Purchase Challan Attachment --}}
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Purchase Challan / চালানের কপি</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="challan_file">চালানের কপি সংযুক্ত করুন</label>
+                                    <input type="file"
+                                           name="challan_file"
+                                           id="challan_file"
+                                           class="form-control"
+                                           accept=".pdf,.jpg,.jpeg,.png">
+                                    <small class="text-muted">
+                                        PDF, JPG, JPEG অথবা PNG ফাইল। সর্বোচ্চ 5 MB।
+                                    </small>
+                                </div>
+                                <div id="challan_preview" class="mt-3"></div>
+                            </div>
+                        </div>
+
                         <hr>
                         <h3 class="text-center mb-3">Product Details</h3>
                         {{-- Product table --}}
@@ -281,4 +302,51 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+
+
+// Purchase challan file validation and preview
+document.addEventListener('DOMContentLoaded', function () {
+    const challanInput = document.getElementById('challan_file');
+    const preview = document.getElementById('challan_preview');
+
+    if (!challanInput || !preview) return;
+
+    challanInput.addEventListener('change', function () {
+        preview.innerHTML = '';
+
+        const file = this.files && this.files[0];
+        if (!file) return;
+
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+
+        if (!allowedTypes.includes(file.type)) {
+            alert('শুধুমাত্র PDF, JPG, JPEG অথবা PNG ফাইল নির্বাচন করুন।');
+            this.value = '';
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('ফাইলের সাইজ 5 MB-এর বেশি হতে পারবে না।');
+            this.value = '';
+            return;
+        }
+
+        const info = document.createElement('div');
+        info.className = 'alert alert-info';
+        info.textContent = 'Selected File: ' + file.name;
+        preview.appendChild(info);
+
+        if (file.type.startsWith('image/')) {
+            const img = document.createElement('img');
+            const objectUrl = URL.createObjectURL(file);
+            img.src = objectUrl;
+            img.style.maxWidth = '300px';
+            img.style.maxHeight = '300px';
+            img.style.marginTop = '10px';
+            img.onload = function () { URL.revokeObjectURL(objectUrl); };
+            preview.appendChild(img);
+        }
+    });
+});
+
 </script>

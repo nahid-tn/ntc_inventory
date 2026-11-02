@@ -13,7 +13,6 @@
         }
         body {
             font-family: 'SolaimanLipi', sans-serif;
-
             line-height: 1.4;
             color: #333;
             margin: 0;
@@ -22,7 +21,6 @@
 
         /* Table */
         table {
-
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
@@ -34,9 +32,7 @@
             padding: 8px;
             text-align: center;
         }
-        th {
-            background-color: #f2f2f2;
-        }
+        th { background-color: #f2f2f2;}
 
         /* Totals */
         .totals {
@@ -53,6 +49,7 @@
             padding: 5px 10px;
         }
     </style>
+
 </x-slot>
 <div class="py-10">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -60,81 +57,34 @@
         {{-- ================= SEARCH FORM ================= --}}
        <form method="GET" action="{{ route('purchase.index') }}" class="mb-4">
             <div class="row g-2 align-items-center">
-
     {{-- Invoice No --}}
-    <div class="col">
-        <input type="text"
-               name="invoice"
-               value="{{ request('invoice') }}"
-               class="form-control"
-               placeholder="Invoice No">
-    </div>
-
+    <div class="col"><input type="text" name="invoice" value="{{ request('invoice') }}" class="form-control" placeholder="Invoice No"></div>
     {{-- Supplier --}}
     <div class="col">
-        <input type="text"
-               id="supplier_search"
-               name="supplier"
-               value="{{ request('supplier') }}"
-               class="form-control"
-               placeholder="Supplier Name">
-
-        <input type="hidden"
-               id="supplier_id"
-               name="supplier_id">
+        <input type="text" id="supplier_search" name="supplier" value="{{ request('supplier') }}" class="form-control" placeholder="Supplier Name">
+        <input type="hidden" id="supplier_id" name="supplier_id">
     </div>
 
     {{-- Product --}}
     <div class="col">
-        <input type="text"
-               id="product_search"
-               name="product"
-               value="{{ request('product') }}"
-               class="form-control"
-               placeholder="Product Name">
-
-        <input type="hidden"
-               id="product_id"
-               name="product_id">
+        <input type="text" id="product_search" name="product" value="{{ request('product') }}" class="form-control" placeholder="Product Name">
+        <input type="hidden" id="product_id" name="product_id">
     </div>
-
     {{-- From Date --}}
-    <div class="col">
-        <input type="date"
-               name="from"
-               value="{{ request('from') }}"
-               class="form-control">
-    </div>
-
+    <div class="col"><input type="date" name="from"  value="{{ request('from') }}" class="form-control"></div>
     {{-- To Date --}}
-    <div class="col">
-        <input type="date"
-               name="to"
-               value="{{ request('to') }}"
-               class="form-control">
-    </div>
-
+    <div class="col"><input type="date" name="to" value="{{ request('to') }}" class="form-control"></div>
     {{-- Search Button --}}
-    <div class="col-auto">
-        <button type="submit" class="btn btn-primary text-nowrap">
-            <i class="fas fa-search"></i> Search
-        </button>
-    </div>
-
+    <div class="col-auto"><button type="submit" class="btn btn-primary text-nowrap"><i class="fas fa-search"></i> Search </button></div>
     {{-- PDF Button --}}
     <div class="col-auto">
-        <button type="submit"
-                formaction="{{ route('purchase.group_report_pdf') }}"
-                formtarget="_blank"
-                class="btn btn-danger text-nowrap">
+        <button type="submit" formaction="{{ route('purchase.group_report_pdf') }}" formtarget="_blank" class="btn btn-danger text-nowrap">
             <i class="fas fa-file-pdf"></i> PDF
         </button>
     </div>
 
 </div>
-
         </form>
-
         {{-- ================= SUMMARY REPORT ================= --}}
         <div class="row mb-4">
             <div class="col-md-3">
@@ -175,7 +125,6 @@
         </div>
 
         {{-- ================= PURCHASE TABLE ================= --}}
-
         <a href="{{ route('purchase.form') }}" class="btn btn-primary mb-3"> ➕ Add Purchase</a>
         <table class="table table-bordered table-striped">
             <thead class="table-dark">
@@ -256,7 +205,6 @@
     <script>
 
     $(document).ready(function(){
-
     // ================= SUPPLIER AUTOCOMPLETE =================
         $("#supplier_search").autocomplete({
         source: function(request,response){
@@ -278,15 +226,12 @@
             }
             });
             },
-
             minLength:1,
-
             select:function(event,ui){
             $("#supplier_search").val(ui.item.value);
             $("#supplier_id").val(ui.item.id);
             return false;
             }
-
         });
 
 
@@ -308,7 +253,6 @@
         value: item.value,
         id: item.id
         };
-
         }));
         }
         });
@@ -317,7 +261,6 @@
         select:function(event,ui){
         $("#product_search").val(ui.item.value);
         $("#product_id").val(ui.item.id);
-
         return false;
         }
         });

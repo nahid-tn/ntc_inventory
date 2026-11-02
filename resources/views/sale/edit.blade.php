@@ -40,6 +40,55 @@
         @media (max-width: 767px) { .sale-edit-page { padding: 14px 8px; } .sale-edit-card { padding: 14px; } .section-card { padding: 12px; } .sale-page-title { font-size: 1.2rem; } }
     </style>
 
+    @php
+        /*
+         * Unit টেবিলের কলামের নাম ভিন্ন হলেও সম্ভাব্য নাম থেকে value/label নেওয়া হবে।
+         * পাশাপাশি পুরোনো রেকর্ডে থাকা unit-ও option হিসেবে রাখা হবে।
+         */
+        $unitOptions = collect($units ?? [])->map(function ($unit) {
+            $attrs = method_exists($unit, 'getAttributes') ? $unit->getAttributes() : (array) $unit;
+
+            $value = $attrs['unit_name']
+                ?? $attrs['name']
+                ?? $attrs['unit']
+                ?? $attrs['short_name']
+                ?? $attrs['symbol']
+                ?? $attrs['title']
+                ?? null;
+
+            $label = $attrs['unit_name_bn']
+                ?? $attrs['name_bn']
+                ?? $attrs['unit_name']
+                ?? $attrs['name']
+                ?? $attrs['unit']
+                ?? $attrs['short_name']
+                ?? $attrs['symbol']
+                ?? $attrs['title']
+                ?? $value;
+
+            if ($value === null || trim((string) $value) === '') {
+                return null;
+            }
+
+            return [
+                'value' => trim((string) $value),
+                'label' => trim((string) $label),
+            ];
+        })->filter()->unique('value')->values();
+
+        $standardUnits = collect([
+            ['value' => 'set', 'label' => 'সেট'],
+            ['value' => 'kg', 'label' => 'কেজি'],
+            ['value' => 'pcs', 'label' => 'পিস'],
+            ['value' => 'box', 'label' => 'বক্স'],
+            ['value' => 'dram', 'label' => 'ড্রাম'],
+        ]);
+
+        $unitOptions = $standardUnits->concat($unitOptions)
+            ->unique('value')
+            ->values();
+    @endphp
+
     <div class="sale-edit-page">
         <div class="sale-edit-container">
             @if($errors->any())
@@ -106,16 +155,32 @@
                                 <td>
                                     <input type="text" name="products[{{ $index }}][product_name]" class="form-control product_search" placeholder="পণ্য খুঁজুন" value="{{ $item->product->product_name ?? '' }}">
                                     <input type="hidden" name="products[{{ $index }}][product_id]" class="product_id" value="{{ $item->product_id }}">
-                                    {{-- <small class="text-muted stock_info">স্টক: {{ $item->product->stock ?? 0 }}</small> --}}
                                 </td>
                                 <td><input type="text" name="products[{{ $index }}][qty]" class="form-control qty bn-number" value="{{ $item->qty }}" required></td>
-                                <td>
+                                {{-- <td>
                                     <select name="products[{{ $index }}][unit]" class="form-control unit" required>
                                         <option value="set" {{ $item->unit=='set'?'selected':'' }}>সেট</option>
                                         <option value="kg" {{ $item->unit=='kg'?'selected':'' }}>কেজি</option>
                                         <option value="pcs" {{ $item->unit=='pcs'?'selected':'' }}>পিস</option>
                                         <option value="box" {{ $item->unit=='box'?'selected':'' }}>বক্স</option>
                                         <option value="dram" {{ $item->unit=='dram'?'selected':'' }}>ড্রাম</option>
+                                    </select>
+                                </td> --}}
+                                <td>
+                                    @php
+                                        $currentUnit = trim((string) old("products.$index.unit", $item->unit ?? 'pcs'));
+                                        $hasCurrentUnit = $unitOptions->contains(fn ($option) => $option['value'] === $currentUnit);
+                                    @endphp
+                                    <select name="products[{{ $index }}][unit]" class="form-control unit" required>
+                                        @if ($currentUnit !== '' && !$hasCurrentUnit)
+                                            <option value="{{ $currentUnit }}" selected>{{ $currentUnit }}</option>
+                                        @endif
+                                        @foreach ($unitOptions as $unitOption)
+                                            <option value="{{ $unitOption['value'] }}"
+                                                {{ $currentUnit === $unitOption['value'] ? 'selected' : '' }}>
+                                                {{ $unitOption['label'] }}
+                                            </option>
+                                        @endforeach
                                     </select>
                                 </td>
                                 <td><input type="text" name="products[{{ $index }}][price]" class="form-control price bn-number" value="{{ $item->price }}" required></td>
@@ -164,12 +229,20 @@
                                     </td>
                                     <td><input type="text" name="old_products[{{ $oldRowIndex }}][qty]" class="form-control old_qty bn-number" value="{{ $i->qty }}"></td>
                                     <td>
+                                        @php
+                                            $currentOldUnit = trim((string) old("old_products.$oldRowIndex.unit", $i->unit ?? 'pcs'));
+                                            $hasCurrentOldUnit = $unitOptions->contains(fn ($option) => $option['value'] === $currentOldUnit);
+                                        @endphp
                                         <select name="old_products[{{ $oldRowIndex }}][unit]" class="form-control old_unit">
-                                            <option value="set" {{ $i->unit=='set'?'selected':'' }}>সেট</option>
-                                            <option value="kg" {{ $i->unit=='kg'?'selected':'' }}>কেজি</option>
-                                            <option value="pcs" {{ $i->unit=='pcs'?'selected':'' }}>পিস</option>
-                                            <option value="box" {{ $i->unit=='box'?'selected':'' }}>বক্স</option>
-                                            <option value="dram" {{ $i->unit=='dram'?'selected':'' }}>ড্রাম</option>
+                                            @if ($currentOldUnit !== '' && !$hasCurrentOldUnit)
+                                                <option value="{{ $currentOldUnit }}" selected>{{ $currentOldUnit }}</option>
+                                            @endif
+                                            @foreach ($unitOptions as $unitOption)
+                                                <option value="{{ $unitOption['value'] }}"
+                                                    {{ $currentOldUnit === $unitOption['value'] ? 'selected' : '' }}>
+                                                    {{ $unitOption['label'] }}
+                                                </option>
+                                            @endforeach
                                         </select>
                                     </td>
                                     <td><input type="text" name="old_products[{{ $oldRowIndex }}][price]" class="form-control old_price bn-number" value="{{ $i->price }}"></td>
@@ -237,28 +310,31 @@
                                     'cheque' => 'চেক',
                                 ];
 
-                                $currentMethod = $sale->payment_method;
+                                // sales টেবিলের নির্দিষ্ট ID-এর payment_method
+                                $currentMethod = old('payment_method', $sale->payment_method);
                             @endphp
 
                             <select name="payment_method" class="form-control" required>
                                 <option value="">-- পদ্ধতি নির্বাচন করুন --</option>
 
+                                @foreach ($paymentMethods as $value => $label)
+                                    <option value="{{ $value }}"
+                                        {{ (string) $currentMethod === (string) $value ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
+
                                 {{-- ডাটাবেইজে থাকা মান তালিকায় না থাকলেও দেখাবে --}}
-                                @if ($currentMethod && !array_key_exists($currentMethod, $paymentMethods))
+                                @if (
+                                    !empty($currentMethod) &&
+                                    !array_key_exists($currentMethod, $paymentMethods)
+                                )
                                     <option value="{{ $currentMethod }}" selected>
                                         {{ $currentMethod }}
                                     </option>
                                 @endif
-
-                                @foreach ($paymentMethods as $value => $label)
-                                    <option value="{{ $value }}"
-                                        {{ $currentMethod === $value ? 'selected' : '' }}>
-                                        {{ $label }}
-                                    </option>
-                                @endforeach
                             </select>
                         </div>
-
                         <div class="form-group col-md-4">
                             <label>গ্যারান্টি সময়কাল</label>
                             <input type="text" class="form-control" id="warranty_period" name="warranty_period" value="{{ $sale->warranty_period }}">
@@ -274,7 +350,7 @@
                     </div>
                     </div>
                     <div class="form-actions">
-                        <button type="button" class="btn btn-outline-secondary" onclick="history.back()">← পিছনে</button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="history.back()"> ← পিছনে </button>
                         <button type="submit" class="btn btn-primary">✓ বিক্রয় আপডেট করুন</button>
                     </div>
                 </form>
@@ -337,8 +413,22 @@ let rowIndex = {{ $sale->details->count() }};
 let oldRowIndex = {{ $oldRowIndex }};
 
 let oldProductsList = @json($old_products->pluck('product_name'));
+let unitOptionsForJs = @json($unitOptions);
+
+function escapeHtml(value) { 
+    return String(value ?? '').replace(/[&<>"']/g, function (char) {
+        return ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        })[char];
+    });
+}
 
 // ------------------------- নতুন পণ্য যোগ -------------------------
+
 function addRow() {
     let tbody = document.querySelector('#product_table tbody');
     let row = tbody.insertRow();
@@ -351,12 +441,8 @@ function addRow() {
         </td>
         <td><input type="text" name="products[${rowIndex}][qty]" class="form-control qty bn-number" value="১"></td>
         <td>
-            <select name="products[${rowIndex}][unit]" class="form-control unit">
-                <option value="set">সেট</option>
-                <option value="kg">কেজি</option>
-                <option value="pcs">পিস</option>
-                <option value="box">বক্স</option>
-                <option value="dram">ড্রাম</option>
+            <select name="products[${rowIndex}][unit]" class="form-control unit" required>
+                ${unitOptionsForJs.map(u => `<option value="${escapeHtml(u.value)}">${escapeHtml(u.label)}</option>`).join('')}
             </select>
         </td>
         <td><input type="text" name="products[${rowIndex}][price]" class="form-control price bn-number" value="০"></td>
@@ -376,7 +462,8 @@ function addOldRow() {
 
     let options = '<option value="">-- পণ্যের নাম নির্বাচন করুন --</option>';
     oldProductsList.forEach(p => {
-        options += `<option value="${p}">${p}</option>`;
+        const safeProductName = escapeHtml(p);
+        options += `<option value="${safeProductName}">${safeProductName}</option>`;
     });
     row.innerHTML = `
         <td class="serial-no"></td>
@@ -384,11 +471,7 @@ function addOldRow() {
         <td><input type="text" name="old_products[${oldRowIndex}][qty]" class="form-control old_qty bn-number" value="০"></td>
         <td>
             <select name="old_products[${oldRowIndex}][unit]" class="form-control old_unit">
-                <option value="set">সেট</option>
-                <option value="kg">কেজি</option>
-                <option value="pcs">পিস</option>
-                <option value="box">বক্স</option>
-                <option value="dram">ড্রাম</option>
+                ${unitOptionsForJs.map(u => `<option value="${escapeHtml(u.value)}">${escapeHtml(u.label)}</option>`).join('')}
             </select>
         </td>
         <td><input type="text" name="old_products[${oldRowIndex}][price]" class="form-control old_price bn-number" value="০"></td>
@@ -452,7 +535,7 @@ function calculateGrandTotal() {
 function calculateDue() {
     let total = parseFloat(document.getElementById('total_amount').value) || 0;
     let paid  = parseFloat(toEn(document.getElementById('paid_amount').value)) || 0;
-    let due = total - paid;
+    let due = Math.max(0, total - paid);
 
     document.getElementById('due_amount_display').value = formatBn(due);
     document.getElementById('due_amount').value = due.toFixed(2);
@@ -484,6 +567,7 @@ document.getElementById('saleForm').addEventListener('submit', function(e) {
 });
 
 // ==================== পণ্যের জন্য jQuery অটোকমপ্লিট ====================
+if (window.jQuery && typeof $.fn.autocomplete === 'function') {
 $(document).on('focus', '.product_search', function () {
     $(this).autocomplete({
         source: '/product-autocomplete',
@@ -511,5 +595,6 @@ $('#customer_search').autocomplete({
         return false;
     }
 });
+}
 </script>
 </x-app-layout>

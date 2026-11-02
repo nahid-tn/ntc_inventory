@@ -117,10 +117,11 @@
         <table>
             <thead>
                 <tr>
-                    <th>#</th>
+                    <th>SLNo</th>
                     <th>Product</th>
                     <th class="text-center">Qty</th>
                     <th class="text-center">Unit</th>
+                    <th class="text-center">Notes</th>
                 </tr>
             </thead>
 
@@ -131,6 +132,7 @@
                     <td>{{ $d->product->product_name }}</td>
                     <td class="text-center">{{ $d->qty }}</td>
                     <td class="text-center">{{ $d->unit }}</td>
+                    <td class="text-center">{{ $d->note }}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -196,8 +198,10 @@
                     <th>Product</th>
                     <th class="text-center">Qty</th>
                     <th class="text-center">Unit</th>
+                    <th class="text-left">Notes</th>
                     <th class="text-right">Price</th>
                     <th class="text-right">Subtotal</th>
+                    
                 </tr>
             </thead>
 
@@ -207,21 +211,24 @@
                     <td>{{ $loop->iteration }}</td>
                     <td>{{ $d->product->product_name }}</td>
                     <td class="text-center">{{ $d->qty }}</td>
-                    <td class="text-center">{{ $d->unit }}</td>
+                    
+                    <td class="text-left">{{ $d->unit }}</td>
+                    <td class="text-left">{{ $d->note }}</td>
                     <td class="text-right">{{ number_format($d->price,2) }}</td>
                     <td class="text-right">{{ number_format($d->subtotal,2) }}</td>
+                    
                 </tr>
                 @endforeach
                 <tr>
-                    <th colspan="5" class="text-right">Subtotal</th>
+                    <th colspan="6" class="text-right">Subtotal</th>
                     <th class="text-right">{{ number_format($sale->subtotal,2) }}</th>
                 </tr>
                 <tr>
-                    <th colspan="5" class="text-right">Paid</th>
+                    <th colspan="6" class="text-right">Paid</th>
                     <th class="text-right">{{ number_format($sale->paid_amount,2) }}</th>
                 </tr>
                 <tr>
-                    <th colspan="5" class="text-right">Due</th>
+                    <th colspan="6" class="text-right">Due</th>
                     <th class="text-right">{{ number_format($sale->due_amount,2) }}</th>
                 </tr>
 

@@ -1,214 +1,512 @@
-<nav x-data="{ open: false }" class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
-    <!-- Primary Navigation Menu -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-            <div class="flex">
-                <!-- Logo -->
-                <div class="shrink-0 flex items-center">
-                   <a href="{{ route('dashboard') }}"><img src="{{ asset('images/logo.png') }}" alt="NTC Logo" class="h-10 w-auto"></a>
-                </div>
-                <!-- Navigation Links -->
-                
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    
-                    <div class="dropdown mt-3 btn-group-toggle">
-                        <button class="btn btn-warning dropdown-toggle"
-                                type="button"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false">
-                                📝 Inventory
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a class="dropdown-item" href="{{ route('product.index') }}">
-                                🏷️ Products
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{{ route('admin.index') }}">
-                                📚 Category
-                                </a>
-                            </li>
-                            <!-- <li>
-                                <a class="dropdown-item" href="{{ route('brand.index') }}">
-                                   🎯 Brand
-                                </a>
-                            </li> -->
-                            <li>
-                                <a class="dropdown-item" href="{{ route('stock.report') }}">
-                                📊 Warehouse</a>
-                            </li>
-                            
-                        </ul>
-                    </div>
-                </div>
 
-                
-               <div class="hidden space-x-12 sm:-my-px sm:ms-10 sm:flex">
-                    
-                <div class="dropdown mt-3">
-                        <button class="btn btn-warning dropdown-toggle"
-                                type="button"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false">
-                           🚚 Purchase
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('supplier.index') }}"> 🏭 Supplier</a></li>
-                            <li><a class="dropdown-item" href="{{ route('purchase.index') }}"> ☰ Purchase List</a></li>
-                            <li><a class="dropdown-item" href="{{ route('supplier.dues') }}"> ♻️ Purchase Dues </a></li>
-                            <li><a class="dropdown-item" href="{{ route('purchase-return.index') }}"> ♻️ Purchase Return </a></li>
-                            <li><a class="dropdown-item" href="{{ route('reports.supplier_payment') }}"> ♻️ Supplier Payment Report </a></li>
-                            <li><a class="dropdown-item" href="{{ route('supplier.ledger',1) }}">📒 Supplier Ledger</a></li>
-                            <li><a class="dropdown-item" href="{{ route('purchase.dashboard') }}"> 🧮 Dashboard</a></li>
-                            <!-- Purchase Order -->
-                            <li class="nav-item"> <a class="nav-link" href="{{ route('purchase-orders.index') }}">📦 Purchase Orders</a></li>
-                        </ul>
-                    </div>
+<nav
+    x-data="{
+        open: false,
+        activeMenu: null,
+        userOpen: false,
+        mobileMenus: {},
 
-                    <div class="dropdown mt-3">
-                        <button class="btn btn-warning dropdown-toggle"
-                                type="button"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false">
-                           🚴 Sales
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('customer.index') }}">🙋🏻‍♂️ Customer </a></li>
-                            <li><a class="dropdown-item" href="{{ route('sale.index') }}">🌿 Sale Details </a></li>
-                             <li><a class="dropdown-item" href="{{ route('replacement.index') }}">♻️ Sale Replacement</a></li>
-                            <li><a class="dropdown-item" href="{{ route('oldsale.old_index') }}">🛍️ Old Product Index</a></li>
-                            <li><a class="dropdown-item" href="{{ route('oldsale.index') }}">🛍️ Old Product Sale</a></li>
-                            <li><a class="dropdown-item" href="{{ route('old_product_exchange.index') }}">🔄 Old Product Exchange</a></li>
-                            <li><a class="btn btn-info" href="{{ route('oldsale.profitlos_report') }}" >🚴 Profit / Loss Report</a></li>
-                            <li><a class="dropdown-item" href="{{ route('ips.form') }}">⚡IPS Calculator</a></li>
-                        </ul>
-                    </div>
-                        <div class="dropdown mt-3">
-                            <button class="btn btn-warning dropdown-toggle"
-                                    type="button"
-                                    data-bs-toggle="dropdown"
-                                    aria-expanded="false">🌿 Accounts
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li> <a class="dropdown-item" href="{{ route('reports.due_reports') }}"> 📊 Customer Due Report</a> </li>
-                                <li><a class="dropdown-item" href="{{ route('reports.supplier_payment') }}">📊 Supplier Due Report</a></li>
-                                <li><a class="dropdown-item" href="{{ route('supplier.payment.index') }}">☰ Supplier Payments List</a></li>
-                                <li><a class="dropdown-item" href="{{ route('expense.index') }}"> ℹ Expense Details</a></li>
-                                <li><a class="dropdown-item" href="{{ route('expense.reportform') }}">ℹ Search Report Expense</a></li>
-                            </ul>
-                        </div>
+        toggleMenu(name) {
+            this.activeMenu = this.activeMenu === name ? null : name;
+            this.userOpen = false;
+        },
 
-                    <!-- <div class="dropdown mt-3">
-                        <button class="btn btn-warning dropdown-toggle"
-                                type="button"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false">
-                           🚴 Expense
-                        </button>
-                        <ul class="dropdown-menu">
-                            
-                             <li>
-                                <a class="dropdown-item" href="{{ route('expense.reportform') }}">
-                                   ℹ Search Report Expense
-                                </a>
-                            </li>
-                        </ul>
-                    </div> -->
-                    <div class="dropdown mt-3">
-                        <button class="btn btn-warning dropdown-toggle"
-                                type="button"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false">
-                           🚴 Reports
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('report.dashboard') }}"> Dashboard</a></li>
-                            <li><a class="dropdown-item" href="{{ route('sales.report') }}"> Sales Report</a></li>
-                            <li><a class="dropdown-item" href="{{ route('purchase.stock') }}"> Purchase Stock</a></li>
-                            <!-- <li><a class="dropdown-item" href="{{ route('ProfitLos.report') }}"> 📊 Profit Loss Report</a></li> -->
-                            <li><a class="dropdown-item" href="{{ route('purchase-return.reportform') }}">📊 Purchase Return Report</a></li>
-                            <li><a class="dropdown-item" href="{{ route('reports.index') }}"> 📊 Profit or Loss Report</a></li>
-                            <li><a class="dropdown-item" href="{{ route('customerReport.customer_all') }}"> 📊 Customer Report</a></li>
-                           <li><a class="dropdown-item" href="{{ route('reports.profit_loss') }}">📊 Daily Profit Report</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
+        closeMenus() {
+            this.open = false;
+            this.activeMenu = null;
+            this.userOpen = false;
+            this.mobileMenus = {};
+        }
+    }"
+    @keydown.escape.window="closeMenus()"
+    @resize.window="if (window.innerWidth >= 768) open = false"
+    class="ntc-navbar"
+>
+    {{-- =====================================
+         Main Navigation Container
+         Logo | Desktop Menu | User | Hamburger
+    ====================================== --}}
+    <div class="ntc-nav-container">
 
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
-                <x-dropdown align="right" width="48">
-                    <x-slot name="trigger">
-                        <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150">
-                            <div>{{ Auth::user()->name }}</div>
-                            <!-- <div class="ms-1">
-                                <img src="{{ asset('images/logo.png') }}" alt="NIC" class="h-10 w-auto">
-                            </div> -->
-                        </button>
-                    </x-slot>
+        {{-- Logo: Left --}}
+        <a href="{{ route('dashboard') }}" class="ntc-logo">
+            <img
+                src="{{ asset('images/logo.png') }}"
+                alt="NTC Logo"
+            >
+        </a>
 
-                    <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('Profile') }}
-                        </x-dropdown-link>
+        {{-- =====================================
+             Desktop Navigation: Center
+        ====================================== --}}
+        <div class="ntc-desktop-nav">
 
-                        <!-- Authentication -->
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-
-                            <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault();
-                                                this.closest('form').submit();">
-                                {{ __('Log Out') }}
-                            </x-dropdown-link>
-                        </form>
-                    </x-slot>
-                </x-dropdown>
-            </div>
-
-            <!-- Hamburger -->
-            <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-900 focus:text-gray-500 dark:focus:text-gray-400 transition duration-150 ease-in-out">
-                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                        <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+            {{-- Inventory --}}
+            <div class="ntc-nav-item">
+                <button
+                    type="button"
+                    class="ntc-nav-button"
+                    :class="{ 'active': activeMenu === 'inventory' }"
+                    @click="toggleMenu('inventory')"
+                    :aria-expanded="activeMenu === 'inventory'"
+                >
+                    📝 Inventory
+                    <span
+                        class="ntc-chevron"
+                        :class="{ 'rotated': activeMenu === 'inventory' }"
+                    >⌄</span>
                 </button>
+
+                <div
+                    class="ntc-dropdown"
+                    x-cloak
+                    x-show="activeMenu === 'inventory'"
+                    x-transition.origin.top.left
+                    @click.outside="activeMenu = null"
+                >
+                    <a class="ntc-dropdown-link" href="{{ route('product.index') }}">🏷️ Products</a>
+                    <a class="ntc-dropdown-link" href="{{ route('admin.index') }}">📚 Category</a>
+                    <a class="ntc-dropdown-link" href="{{ route('stock.report') }}">📊 Warehouse</a>
+                </div>
+            </div>
+
+            {{-- Purchase --}}
+            <div class="ntc-nav-item">
+                <button
+                    type="button"
+                    class="ntc-nav-button"
+                    :class="{ 'active': activeMenu === 'purchase' }"
+                    @click="toggleMenu('purchase')"
+                    :aria-expanded="activeMenu === 'purchase'"
+                >
+                    🚚 Purchase
+                    <span
+                        class="ntc-chevron"
+                        :class="{ 'rotated': activeMenu === 'purchase' }"
+                    >⌄</span>
+                </button>
+
+                <div
+                    class="ntc-dropdown"
+                    x-cloak
+                    x-show="activeMenu === 'purchase'"
+                    x-transition.origin.top.left
+                    @click.outside="activeMenu = null"
+                >
+                    <a class="ntc-dropdown-link" href="{{ route('supplier.index') }}">🏭 Supplier</a>
+                    <a class="ntc-dropdown-link" href="{{ route('purchase.index') }}">☰ Purchase List</a>
+                    <a class="ntc-dropdown-link" href="{{ route('supplier.dues') }}">♻️ Purchase Dues</a>
+                    <a class="ntc-dropdown-link" href="{{ route('purchase-return.index') }}">♻️ Purchase Return</a>
+                    <a class="ntc-dropdown-link" href="{{ route('reports.supplier_payment') }}">📊 Supplier Payment Report</a>
+                    <a class="ntc-dropdown-link" href="{{ route('supplier.ledger', 1) }}">📒 Supplier Ledger</a>
+                    <a class="ntc-dropdown-link" href="{{ route('purchase.dashboard') }}">🧮 Purchase Dashboard</a>
+                    <a class="ntc-dropdown-link" href="{{ route('purchase-orders.index') }}">📦 Purchase Orders</a>
+                </div>
+            </div>
+
+            {{-- Sales --}}
+            <div class="ntc-nav-item">
+                <button
+                    type="button"
+                    class="ntc-nav-button"
+                    :class="{ 'active': activeMenu === 'sales' }"
+                    @click="toggleMenu('sales')"
+                    :aria-expanded="activeMenu === 'sales'"
+                >
+                    🚴 Sales
+                    <span
+                        class="ntc-chevron"
+                        :class="{ 'rotated': activeMenu === 'sales' }"
+                    >⌄</span>
+                </button>
+
+                <div
+                    class="ntc-dropdown"
+                    x-cloak
+                    x-show="activeMenu === 'sales'"
+                    x-transition.origin.top.left
+                    @click.outside="activeMenu = null"
+                >
+                    <a class="ntc-dropdown-link" href="{{ route('customer.index') }}">🙋 Customer</a>
+                    <a class="ntc-dropdown-link" href="{{ route('sale.index') }}">🌿 Sale Details</a>
+                    <a class="ntc-dropdown-link" href="{{ route('replacement.index') }}">♻️ Sale Replacement</a>
+                    <a class="ntc-dropdown-link" href="{{ route('oldsale.old_index') }}">🛍️ Old Product Index</a>
+                    <a class="ntc-dropdown-link" href="{{ route('oldsale.index') }}">🛍️ Old Product Sale</a>
+                    <a class="ntc-dropdown-link" href="{{ route('old_product_exchange.index') }}">🔄 Old Product Exchange</a>
+                    <a class="ntc-dropdown-link" href="{{ route('oldsale.profitlos_report') }}">📈 Profit / Loss Report</a>
+                    <a class="ntc-dropdown-link" href="{{ route('ips.form') }}">⚡ IPS Calculator</a>
+                </div>
+            </div>
+
+            {{-- Accounts --}}
+            <div class="ntc-nav-item">
+                <button
+                    type="button"
+                    class="ntc-nav-button"
+                    :class="{ 'active': activeMenu === 'accounts' }"
+                    @click="toggleMenu('accounts')"
+                    :aria-expanded="activeMenu === 'accounts'"
+                >
+                    🌿 Accounts
+                    <span
+                        class="ntc-chevron"
+                        :class="{ 'rotated': activeMenu === 'accounts' }"
+                    >⌄</span>
+                </button>
+
+                <div
+                    class="ntc-dropdown"
+                    x-cloak
+                    x-show="activeMenu === 'accounts'"
+                    x-transition.origin.top.left
+                    @click.outside="activeMenu = null"
+                >
+                    <a class="ntc-dropdown-link" href="{{ route('reports.due_reports') }}">📊 Customer Due Report</a>
+                    <a class="ntc-dropdown-link" href="{{ route('reports.supplier_payment') }}">📊 Supplier Due Report</a>
+                    <a class="ntc-dropdown-link" href="{{ route('supplier.payment.index') }}">☰ Supplier Payments List</a>
+                    <a class="ntc-dropdown-link" href="{{ route('expense.index') }}">ℹ️ Expense Details</a>
+                    <a class="ntc-dropdown-link" href="{{ route('expense.reportform') }}">🔎 Search Expense Report</a>
+                </div>
+            </div>
+
+            {{-- Reports --}}
+            <div class="ntc-nav-item">
+                <button
+                    type="button"
+                    class="ntc-nav-button"
+                    :class="{ 'active': activeMenu === 'reports' }"
+                    @click="toggleMenu('reports')"
+                    :aria-expanded="activeMenu === 'reports'"
+                >
+                    📊 Reports
+                    <span
+                        class="ntc-chevron"
+                        :class="{ 'rotated': activeMenu === 'reports' }"
+                    >⌄</span>
+                </button>
+
+                <div
+                    class="ntc-dropdown"
+                    x-cloak
+                    x-show="activeMenu === 'reports'"
+                    x-transition.origin.top.left
+                    @click.outside="activeMenu = null"
+                >
+                    <a class="ntc-dropdown-link" href="{{ route('report.dashboard') }}">📊 Dashboard</a>
+                    <a class="ntc-dropdown-link" href="{{ route('sales.report') }}">📈 Sales Report</a>
+                    <a class="ntc-dropdown-link" href="{{ route('purchase.stock') }}">📦 Purchase Stock</a>
+                    <a class="ntc-dropdown-link" href="{{ route('purchase-return.reportform') }}">📊 Purchase Return Report</a>
+                    <a class="ntc-dropdown-link" href="{{ route('reports.index') }}">📈 Profit or Loss Report</a>
+                    <a class="ntc-dropdown-link" href="{{ route('customerReport.customer_all') }}">👥 Customer Report</a>
+                    <a class="ntc-dropdown-link" href="{{ route('reports.profit_loss') }}">📊 Daily Profit Report</a>
+                </div>
+            </div>
+
+        </div>
+
+        {{-- =====================================
+             Desktop User Menu: Right
+        ====================================== --}}
+        <div class="ntc-user-desktop">
+            <div class="ntc-user-menu">
+
+                <button
+                    type="button"
+                    class="ntc-user-button"
+                    @click="userOpen = !userOpen; activeMenu = null"
+                    :aria-expanded="userOpen"
+                    aria-label="User menu"
+                >
+                    <span class="ntc-avatar">
+                        {{ strtoupper(substr(Auth::user()->name ?? 'U', 0, 1)) }}
+                    </span>
+
+                    <span class="ntc-user-name">
+                        {{ Auth::user()->name ?? 'User' }}
+                    </span>
+
+                    <span
+                        class="ntc-chevron"
+                        :class="{ 'rotated': userOpen }"
+                    >⌄</span>
+                </button>
+
+                <div
+                    class="ntc-dropdown ntc-user-dropdown"
+                    x-cloak
+                    x-show="userOpen"
+                    x-transition.origin.top.right
+                    @click.outside="userOpen = false"
+                >
+                    <div class="ntc-user-info">
+                        <strong>{{ Auth::user()->name ?? 'User' }}</strong>
+                        <small>{{ Auth::user()->email ?? '' }}</small>
+                    </div>
+
+                    <a
+                        class="ntc-dropdown-link"
+                        href="{{ route('profile.edit') }}"
+                    >
+                        👤 Profile
+                    </a>
+
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button
+                            type="submit"
+                            class="ntc-dropdown-link ntc-logout-button"
+                        >
+                            🚪 Log Out
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
+
+        {{-- =====================================
+             Mobile Hamburger: Right
+        ====================================== --}}
+        <button
+            type="button"
+            class="ntc-hamburger"
+            @click="open = !open; activeMenu = null; userOpen = false"
+            :aria-expanded="open"
+            aria-label="Toggle navigation menu"
+        >
+            <svg
+                x-show="!open"
+                x-cloak
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                aria-hidden="true"
+            >
+                <path
+                    d="M4 6h16M4 12h16M4 18h16"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                />
+            </svg>
+
+            <svg
+                x-show="open"
+                x-cloak
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                aria-hidden="true"
+            >
+                <path
+                    d="M6 6l12 12M18 6L6 18"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                />
+            </svg>
+        </button>
+
     </div>
 
-    <!-- Responsive Navigation Menu -->
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
-        <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                {{ __('Dashboard') }}
-            </x-responsive-nav-link>
+    {{-- =====================================
+         Mobile Navigation
+    ====================================== --}}
+    <div
+        class="ntc-mobile-nav"
+        x-cloak
+        x-show="open"
+        x-transition
+    >
+        <a
+            class="ntc-mobile-link"
+            href="{{ route('dashboard') }}"
+        >
+            🏠 Dashboard
+        </a>
+
+        {{-- Mobile Inventory --}}
+        <div class="ntc-mobile-group">
+            <button
+                type="button"
+                class="ntc-mobile-heading"
+                @click="mobileMenus.inventory = !mobileMenus.inventory"
+                :aria-expanded="!!mobileMenus.inventory"
+            >
+                <span>📝 Inventory</span>
+                <span
+                    class="ntc-chevron"
+                    :class="{ 'rotated': mobileMenus.inventory }"
+                >⌄</span>
+            </button>
+
+            <div
+                class="ntc-mobile-submenu"
+                x-cloak
+                x-show="mobileMenus.inventory"
+                x-transition
+            >
+                <a href="{{ route('product.index') }}">🏷️ Products</a>
+                <a href="{{ route('admin.index') }}">📚 Category</a>
+                <a href="{{ route('stock.report') }}">📊 Warehouse</a>
+            </div>
         </div>
 
-        <!-- Responsive Settings Options -->
-        <div class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-600">
-            <div class="px-4">
-                <div class="font-medium text-base text-gray-800 dark:text-gray-200">{{ Auth::user()->name }}</div>
-                <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
-            </div>
+        {{-- Mobile Purchase --}}
+        <div class="ntc-mobile-group">
+            <button
+                type="button"
+                class="ntc-mobile-heading"
+                @click="mobileMenus.purchase = !mobileMenus.purchase"
+                :aria-expanded="!!mobileMenus.purchase"
+            >
+                <span>🚚 Purchase</span>
+                <span
+                    class="ntc-chevron"
+                    :class="{ 'rotated': mobileMenus.purchase }"
+                >⌄</span>
+            </button>
 
-            <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">
-                    {{ __('Profile') }}
-                </x-responsive-nav-link>
-
-                <!-- Authentication -->
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-
-                    <x-responsive-nav-link :href="route('logout')"
-                            onclick="event.preventDefault();
-                                        this.closest('form').submit();">
-                        {{ __('Log Out') }}
-                    </x-responsive-nav-link>
-                </form>
+            <div
+                class="ntc-mobile-submenu"
+                x-cloak
+                x-show="mobileMenus.purchase"
+                x-transition
+            >
+                <a href="{{ route('supplier.index') }}">🏭 Supplier</a>
+                <a href="{{ route('purchase.index') }}">☰ Purchase List</a>
+                <a href="{{ route('supplier.dues') }}">♻️ Purchase Dues</a>
+                <a href="{{ route('purchase-return.index') }}">♻️ Purchase Return</a>
+                <a href="{{ route('reports.supplier_payment') }}">📊 Supplier Payment Report</a>
+                <a href="{{ route('supplier.ledger', 1) }}">📒 Supplier Ledger</a>
+                <a href="{{ route('purchase.dashboard') }}">🧮 Purchase Dashboard</a>
+                <a href="{{ route('purchase-orders.index') }}">📦 Purchase Orders</a>
             </div>
         </div>
+
+        {{-- Mobile Sales --}}
+        <div class="ntc-mobile-group">
+            <button
+                type="button"
+                class="ntc-mobile-heading"
+                @click="mobileMenus.sales = !mobileMenus.sales"
+                :aria-expanded="!!mobileMenus.sales"
+            >
+                <span>🚴 Sales</span>
+                <span
+                    class="ntc-chevron"
+                    :class="{ 'rotated': mobileMenus.sales }"
+                >⌄</span>
+            </button>
+
+            <div
+                class="ntc-mobile-submenu"
+                x-cloak
+                x-show="mobileMenus.sales"
+                x-transition
+            >
+                <a href="{{ route('customer.index') }}">🙋 Customer</a>
+                <a href="{{ route('sale.index') }}">🌿 Sale Details</a>
+                <a href="{{ route('replacement.index') }}">♻️ Sale Replacement</a>
+                <a href="{{ route('oldsale.old_index') }}">🛍️ Old Product Index</a>
+                <a href="{{ route('oldsale.index') }}">🛍️ Old Product Sale</a>
+                <a href="{{ route('old_product_exchange.index') }}">🔄 Old Product Exchange</a>
+                <a href="{{ route('oldsale.profitlos_report') }}">📈 Profit / Loss Report</a>
+                <a href="{{ route('ips.form') }}">⚡ IPS Calculator</a>
+            </div>
+        </div>
+
+        {{-- Mobile Accounts --}}
+        <div class="ntc-mobile-group">
+            <button
+                type="button"
+                class="ntc-mobile-heading"
+                @click="mobileMenus.accounts = !mobileMenus.accounts"
+                :aria-expanded="!!mobileMenus.accounts"
+            >
+                <span>🌿 Accounts</span>
+                <span
+                    class="ntc-chevron"
+                    :class="{ 'rotated': mobileMenus.accounts }"
+                >⌄</span>
+            </button>
+
+            <div
+                class="ntc-mobile-submenu"
+                x-cloak
+                x-show="mobileMenus.accounts"
+                x-transition
+            >
+                <a href="{{ route('reports.due_reports') }}">📊 Customer Due Report</a>
+                <a href="{{ route('reports.supplier_payment') }}">📊 Supplier Due Report</a>
+                <a href="{{ route('supplier.payment.index') }}">☰ Supplier Payments List</a>
+                <a href="{{ route('expense.index') }}">ℹ️ Expense Details</a>
+                <a href="{{ route('expense.reportform') }}">🔎 Search Expense Report</a>
+            </div>
+        </div>
+
+        {{-- Mobile Reports --}}
+        <div class="ntc-mobile-group">
+            <button
+                type="button"
+                class="ntc-mobile-heading"
+                @click="mobileMenus.reports = !mobileMenus.reports"
+                :aria-expanded="!!mobileMenus.reports"
+            >
+                <span>📊 Reports</span>
+                <span
+                    class="ntc-chevron"
+                    :class="{ 'rotated': mobileMenus.reports }"
+                >⌄</span>
+            </button>
+
+            <div
+                class="ntc-mobile-submenu"
+                x-cloak
+                x-show="mobileMenus.reports"
+                x-transition
+            >
+                <a href="{{ route('report.dashboard') }}">📊 Dashboard</a>
+                <a href="{{ route('sales.report') }}">📈 Sales Report</a>
+                <a href="{{ route('purchase.stock') }}">📦 Purchase Stock</a>
+                <a href="{{ route('purchase-return.reportform') }}">📊 Purchase Return Report</a>
+                <a href="{{ route('reports.index') }}">📈 Profit or Loss Report</a>
+                <a href="{{ route('customerReport.customer_all') }}">👥 Customer Report</a>
+                <a href="{{ route('reports.profit_loss') }}">📊 Daily Profit Report</a>
+            </div>
+        </div>
+
+        {{-- =====================================
+             Mobile User: Name, Email, Profile, Logout
+        ====================================== --}}
+        <div class="ntc-mobile-user">
+
+            <div class="ntc-mobile-user-info">
+                <strong>
+                    {{ Auth::user()?->name ?? 'নাম পাওয়া যায়নি' }}
+                </strong>
+
+                <small>
+                    {{ Auth::user()?->email ?? '' }}
+                </small>
+            </div>
+
+            <a
+                class="ntc-mobile-link"
+                href="{{ route('profile.edit') }}"
+            >
+                👤 Profile
+            </a>
+
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+
+                <button
+                    type="submit"
+                    class="ntc-mobile-link ntc-mobile-logout"
+                >
+                    🚪 Log Out
+                </button>
+            </form>
+
+        </div>
+
     </div>
 </nav>
