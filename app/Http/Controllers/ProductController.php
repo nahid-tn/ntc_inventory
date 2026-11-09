@@ -25,7 +25,7 @@ class ProductController extends Controller
                 });
             })
             ->orderBy('product_code', 'desc')
-            ->paginate(20)
+            ->paginate(2000)
             ->withQueryString();
         // dd($products);
         return view('product.index', compact('products'));

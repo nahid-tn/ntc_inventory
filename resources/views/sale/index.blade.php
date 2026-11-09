@@ -151,6 +151,18 @@
                             <i class="fas fa-plus"></i> বিক্রয়
                         </a>
                     </div>
+ <div class="stat-item">
+    <a href="{{ route('sale.transactionHistory', array_filter([
+        'search' => request('customer'),
+        'customer_id' => request('customer_id'),
+    ])) }}"
+       class="btn btn-primary">
+
+        <i class="fas fa-file-invoice-dollar"></i>
+        কাস্টমার লেনদেন হিসাব
+
+    </a>
+</div>
                     
                     <div class="stat-item">
                         <span class="label">
@@ -393,6 +405,16 @@
                                                class="btn btn-primary btn-sm" title="পিডিএফ ডাউনলোড" target="_blank">
                                                 <i class="fas fa-file-pdf"></i>
                                             </a>
+
+                                            <a href="{{ route('sale.transactionHistory', $sale->customer_id) }}" class="btn btn-warning btn-sm" title="সম্পাদনা">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+{{--                                             
+                                            <a href="{{ route('sale.transactionHistory', class="btn btn-primary"><i class="fas fa-file-invoice-dollar"></i>
+                                            </a> --}}
+
+
+
 
                                             <a href="{{ route('sale.delete', $sale->id) }}" class="btn btn-danger btn-sm" title="মুছুন" onclick="return confirm('আপনি কি নিশ্চিত এই বিক্রয়টি মুছে ফেলতে চান?')">
                                                 <i class="fas fa-trash"></i>

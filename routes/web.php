@@ -145,7 +145,17 @@ Route::middleware(['auth','admin'])->group(function () {
     Route::get('/sale/create', [SalesController::class, 'createForm'])->name('sale.createform');
     Route::post('/sale/create', [SalesController::class, 'store'])->name('sale.store');
     Route::get('/sale/{id}/edit', [SalesController::class, 'edit'])->name('sale.edit');
+
     Route::put('/sale/{id}', [SalesController::class, 'update'])->name('sale.update');
+        Route::get('/sale/transaction-history', [
+    SalesController::class,
+    'transactionHistory'
+])->name('sale.transactionHistory');
+Route::get('/sale/transaction-history/pdf/{customerId}', [
+    SalesController::class,
+    'transactionHistoryPdf'
+])->whereNumber('customerId')
+  ->name('sale.transactionHistoryPdf');
     Route::get('/sale/{id}', [SalesController::class, 'view'])->name('sale.view');
     Route::get('/sale/{id}/pdf', [SalesController::class, 'downloadPdf'])->name('sale.pdf');
     Route::get('/sale/download-pdf/{id}', [SalesController::class, 'downloadPdf'])->name('sale.downloadPdf');
@@ -160,7 +170,8 @@ Route::middleware(['auth','admin'])->group(function () {
     Route::put('sale/partial-payment/{id}/update', [SalesController::class, 'updatePartialPayment'])->name('sale.updatePartialPayment');
     Route::delete('sale/partial-payment/{id}/delete', [SalesController::class, 'deletePartialPayment'])->name('sale.deletePartialPayment');
     Route::get('sale/{id}/partial-payment-pdf', [SalesController::class, 'partialPaymentPdf'])->name('sale.partialPaymentPdf');
-
+    
+    // sales report routes
     Route::get('/sales-report', [SalesReportController::class,'index'])->name('sales.report');
     Route::get('/sales-report/filter', [SalesReportController::class,'filter'])->name('sales.report.filter');
     Route::get('/report/dashboard',[SalesReportController::class,'dashboard'])->name('report.dashboard');

@@ -19,6 +19,7 @@ use Mpdf\Config\ConfigVariables;
 use Mpdf\Config\FontVariables;
 use App\Models\Category;
 use App\Models\CompanyInfo;
+use Illuminate\Support\Facades\File;
 
 class SalesController extends Controller
 {
@@ -764,134 +765,67 @@ class SalesController extends Controller
             ->with('success', 'Sale Updated Successfully');
     }
 
-// public function view($id)
-// {
-//     $sale = Sales::with([
-//         'customer',
-//         'details.product',
-//         'oldProductPurchases.details.oldProduct',
-//         'receivedPayments',
-//     ])->findOrFail($id);
-
-//     $company = CompanyInfo::getInfo();
-//     $receivedTotal = (float) $sale->receivedPayments->sum('amount');
-//     $totalPaid = $sale->receivedPayments->isNotEmpty()
-//         ? $receivedTotal
-//         : (float) $sale->paid_amount;
-//     $dueAmount = max(
-//         0,
-//         (float) $sale->total_amount - $totalPaid
-//     );
-
-//     $previousSales = Sales::where('customer_id', $sale->customer_id)
-//         ->where('id', '!=', $sale->id)
-//         ->get(['id', 'total_amount', 'paid_amount', 'due_amount']);
-
-//     $previousDue = 0;
-
-//     foreach ($previousSales as $previousSale) {
-//         $previousReceived = (float) \App\Models\SalesReceived::where(
-//             'sale_id',
-//             $previousSale->id
-//         )->sum('amount');
-
-//         if (
-//             \App\Models\SalesReceived::where(
-//                 'sale_id',
-//                 $previousSale->id
-//             )->exists()
-//         ) {
-//             $previousPaid = $previousReceived;
-//         } else {
-//             $previousPaid = (float) $previousSale->paid_amount;
-//         }
-
-//         $previousSaleDue = max(
-//             0,
-//             (float) $previousSale->total_amount - $previousPaid
-//         );
-
-//         $previousDue += $previousSaleDue;
-//     }
-
-//     $grandDue = $previousDue + $dueAmount;
-//     return view('sale.view', compact(
-//         'sale',
-//         'company',
-//         'totalPaid',
-//         'dueAmount',
-//         'previousDue',
-//         'grandDue'
-//     ));
-// }
 
     public function view($id)
-{
-    $sale = Sales::with([
-        'customer',
-        'details.product',
-        'oldProductPurchases.details.oldProduct',
-        'receivedPayments',
-    ])->findOrFail($id);
+    {
+        $sale = Sales::with([
+            'customer',
+            'details.product',
+            'oldProductPurchases.details.oldProduct',
+            'receivedPayments',
+        ])->findOrFail($id);
 
-    $company = CompanyInfo::getInfo();
+        $company = CompanyInfo::getInfo();
 
-    /*
-    |--------------------------------------------------------------------------
-    | বর্তমান চালানের হিসাব
-    |--------------------------------------------------------------------------
-    | index() এর মতো:
-    | মোট পরিশোধ = paid_amount + receivedPayments এর মোট amount
-    */
-    $receivedTotal = (float) $sale->receivedPayments->sum('amount');
+        /*
+        |--------------------------------------------------------------------------
+        | বর্তমান চালানের হিসাব
+        |--------------------------------------------------------------------------
+        | index() এর মতো:
+        | মোট পরিশোধ = paid_amount + receivedPayments এর মোট amount
+        */
+        $receivedTotal = (float) $sale->receivedPayments->sum('amount');
+        $totalPaid = (float) ($sale->paid_amount ?? 0) + $receivedTotal;
+        $dueAmount = (float) $sale->total_amount - $totalPaid;
 
-    $totalPaid = (float) ($sale->paid_amount ?? 0) + $receivedTotal;
+        /*
+        |--------------------------------------------------------------------------
+        | একই কাস্টমারের পূর্বের চালানগুলোর বাকি
+        |--------------------------------------------------------------------------
+        */
+        $previousSales = Sales::with('receivedPayments')
+            ->where('customer_id', $sale->customer_id)
+            ->where('id', '!=', $sale->id)
+            ->get();
 
-    $dueAmount = (float) $sale->total_amount - $totalPaid;
+        $previousDue = 0;
 
-    /*
-    |--------------------------------------------------------------------------
-    | একই কাস্টমারের পূর্বের চালানগুলোর বাকি
-    |--------------------------------------------------------------------------
-    */
-    $previousSales = Sales::with('receivedPayments')
-        ->where('customer_id', $sale->customer_id)
-        ->where('id', '!=', $sale->id)
-        ->get();
+        foreach ($previousSales as $previousSale) {
+            $previousPaidFromSale = (float) ($previousSale->paid_amount ?? 0);
+            $previousPaidFromReceived = (float) $previousSale
+                ->receivedPayments
+                ->sum('amount');
+            $previousTotalPaid = $previousPaidFromSale + $previousPaidFromReceived;
+            $previousSaleDue = (float) $previousSale->total_amount - $previousTotalPaid;
+            $previousDue += $previousSaleDue;
+        }
 
-    $previousDue = 0;
+        /*
+        |--------------------------------------------------------------------------
+        | কাস্টমারের সর্বমোট বাকি
+        |--------------------------------------------------------------------------
+        */
+        $grandDue = $previousDue + $dueAmount;
 
-    foreach ($previousSales as $previousSale) {
-
-        $previousPaidFromSale = (float) ($previousSale->paid_amount ?? 0);
-
-        $previousPaidFromReceived = (float) $previousSale
-            ->receivedPayments
-            ->sum('amount');
-
-        $previousTotalPaid = $previousPaidFromSale + $previousPaidFromReceived;
-
-        $previousSaleDue = (float) $previousSale->total_amount - $previousTotalPaid;
-
-        $previousDue += $previousSaleDue;
+        return view('sale.view', compact(
+            'sale',
+            'company',
+            'totalPaid',
+            'dueAmount',
+            'previousDue',
+            'grandDue'
+        ));
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | কাস্টমারের সর্বমোট বাকি
-    |--------------------------------------------------------------------------
-    */
-    $grandDue = $previousDue + $dueAmount;
-
-    return view('sale.view', compact(
-        'sale',
-        'company',
-        'totalPaid',
-        'dueAmount',
-        'previousDue',
-        'grandDue'
-    ));
-}
 
     public function editPartial($id)
     {
@@ -1067,192 +1001,192 @@ class SalesController extends Controller
     //  ============================================================
     //  MAIN PDF: downloadPdf()
     //  ============================================================
-public function downloadPdf($id)
-{
-    $sale = Sales::with([
-        'customer',
-        'details.product',
-        'receivedPayments',
-        'oldProductPurchases.details.oldProduct',
-    ])->findOrFail($id);
+    public function downloadPdf($id)
+    {
+        $sale = Sales::with([
+            'customer',
+            'details.product',
+            'receivedPayments',
+            'oldProductPurchases.details.oldProduct',
+        ])->findOrFail($id);
 
-    $companyInfo = DB::table('company_info')->first();
-    $printBoth = request()->has('print_both') && request()->get('print_both') == 'true';
-    // Previous Due
-    $previousDue = 0;
-    $previousSales = Sales::where('customer_id', $sale->customer_id)
-        ->where('id', '!=', $sale->id)
-        ->get();
+        $companyInfo = DB::table('company_info')->first();
+        $printBoth = request()->has('print_both') && request()->get('print_both') == 'true';
+        // Previous Due
+        $previousDue = 0;
+        $previousSales = Sales::where('customer_id', $sale->customer_id)
+            ->where('id', '!=', $sale->id)
+            ->get();
 
-    foreach ($previousSales as $prev) {
-        $received = DB::table('sales_received')->where('sale_id', $prev->id)->sum('amount');
-        $discount = $prev->discount_amount ?? 0;
-        $net = ($prev->total_amount ?? 0) - $discount;
-        $paid = ($prev->paid_amount ?? 0) + $received;
-        $previousDue += max(0, $net - $paid);
-    }
-    $previousDue = (float) $previousDue;
-    $mpdf = new \Mpdf\Mpdf([
-        'mode'             => 'utf-8',
-        'format'           => 'A4',
-        'autoScriptToLang' => true,
-        'autoLangToFont'   => true,
-        'fontDir'          => array_merge(
-            (new \Mpdf\Config\ConfigVariables())->getDefaults()['fontDir'],
-            [public_path('fonts')]
-        ),
-        'fontdata' => (new \Mpdf\Config\FontVariables())->getDefaults()['fontdata'] + [
-            'solaimanlipi' => [
-                'R'          => 'SolaimanLipi.ttf',
-                'useOTL'     => 0,
-                'useKashida' => 0,
-            ]
-        ],
-        'default_font'  => 'solaimanlipi',
-        'margin_top'    => 21,
-        'margin_bottom' => 28,
-        'margin_left'   => 15,
-        'margin_right'  => 15,
-        'margin_header' => 5,
-        'margin_footer' => 5,
-    ]);
+        foreach ($previousSales as $prev) {
+            $received = DB::table('sales_received')->where('sale_id', $prev->id)->sum('amount');
+            $discount = $prev->discount_amount ?? 0;
+            $net = ($prev->total_amount ?? 0) - $discount;
+            $paid = ($prev->paid_amount ?? 0) + $received;
+            $previousDue += max(0, $net - $paid);
+        }
+        $previousDue = (float) $previousDue;
+        $mpdf = new \Mpdf\Mpdf([
+            'mode'             => 'utf-8',
+            'format'           => 'A4',
+            'autoScriptToLang' => true,
+            'autoLangToFont'   => true,
+            'fontDir'          => array_merge(
+                (new \Mpdf\Config\ConfigVariables())->getDefaults()['fontDir'],
+                [public_path('fonts')]
+            ),
+            'fontdata' => (new \Mpdf\Config\FontVariables())->getDefaults()['fontdata'] + [
+                'solaimanlipi' => [
+                    'R'          => 'SolaimanLipi.ttf',
+                    'useOTL'     => 0,
+                    'useKashida' => 0,
+                ]
+            ],
+            'default_font'  => 'solaimanlipi',
+            'margin_top'    => 21,
+            'margin_bottom' => 28,
+            'margin_left'   => 15,
+            'margin_right'  => 15,
+            'margin_header' => 5,
+            'margin_footer' => 5,
+        ]);
 
-    $mpdf->shrink_tables_to_fit   = 0;
-    $mpdf->keep_table_proportions = true;
-    $mpdf->autoPadding            = false;
-    $mpdf->SetAutoPageBreak(true, 22);
+        $mpdf->shrink_tables_to_fit   = 0;
+        $mpdf->keep_table_proportions = true;
+        $mpdf->autoPadding            = false;
+        $mpdf->SetAutoPageBreak(true, 22);
 
-    // Company Info
-    $companyName    = $companyInfo->company_name_bangla ?? $companyInfo->company_name_english ?? 'কোম্পানির নাম';
-    $companyAddress = $companyInfo->company_address_bangla ?? $companyInfo->company_address_english ?? '';
-    $companyPhone   = $companyInfo->company_phone_bangla ?? $companyInfo->company_phone_english ?? '';
-    $companyEmail   = $companyInfo->email ?? '';
+        // Company Info
+        $companyName    = $companyInfo->company_name_bangla ?? $companyInfo->company_name_english ?? 'কোম্পানির নাম';
+        $companyAddress = $companyInfo->company_address_bangla ?? $companyInfo->company_address_english ?? '';
+        $companyPhone   = $companyInfo->company_phone_bangla ?? $companyInfo->company_phone_english ?? '';
+        $companyEmail   = $companyInfo->email ?? '';
 
-    // Company Logo
-    $logoPath = '';
-    if (!empty($companyInfo->logo)) {
-        $possiblePath = public_path('images/' . $companyInfo->logo);
-        if (file_exists($possiblePath)) {
-            $logoPath = $possiblePath;
-        } else {
-            $possiblePath = public_path($companyInfo->logo);
+        // Company Logo
+        $logoPath = '';
+        if (!empty($companyInfo->logo)) {
+            $possiblePath = public_path('images/' . $companyInfo->logo);
             if (file_exists($possiblePath)) {
                 $logoPath = $possiblePath;
+            } else {
+                $possiblePath = public_path($companyInfo->logo);
+                if (file_exists($possiblePath)) {
+                    $logoPath = $possiblePath;
+                }
             }
         }
-    }
 
-    // Header
-    $headerHtml = '
-        <table style="width:100%; border-collapse:collapse; border:none; font-family:solaimanlipi; border-bottom:2px solid #000; padding-bottom:4px;">
-            <tr>
-                <td style="border:none; width:15%; text-align:left; vertical-align:middle; padding:0 6px 0 0;">';
-                if ($logoPath) {
-                    $headerHtml .= '<img src="file://' . $logoPath . '" style="height: 35px;; max-width:100%;">';
+        // Header
+        $headerHtml = '
+            <table style="width:100%; border-collapse:collapse; border:none; font-family:solaimanlipi; border-bottom:2px solid #000; padding-bottom:4px;">
+                <tr>
+                    <td style="border:none; width:15%; text-align:left; vertical-align:middle; padding:0 6px 0 0;">';
+                    if ($logoPath) {
+                        $headerHtml .= '<img src="file://' . $logoPath . '" style="height: 35px;; max-width:100%;">';
+                    }
+                    $headerHtml .= '
+                    </td>
+                    <td style="border:none; width:85%; text-align:center; vertical-align:middle; padding:0;">
+                        <h2 style="margin:0; font-size:19px; line-height:1.3; font-weight:bold;">' . e($companyName) . '</h2>
+                        <p style="margin:2px 0; font-size:11px; line-height:1.4;">
+                            ' . e($companyAddress) . '<br>
+                            মোবাইল: ' . e($companyPhone) . ($companyEmail ? ' | ইমেইল: ' . e($companyEmail) : '') . '
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        ';
+        $mpdf->SetHTMLHeader($headerHtml);
+
+        // Footer
+        $footerHtml = '
+            <div style="text-align:center; border-top:1px solid #000; padding-top:4px; font-size:11px; font-family:solaimanlipi; line-height:1.5;">
+                সফটওয়্যার দ্বারা জেনারেট করা রিপোর্ট | ' . e($companyName) . ' | মোবাইল: ' . e($companyPhone) . '
+                <br>পৃষ্ঠা {PAGENO} / {nbpg}
+            </div>
+        ';
+        $mpdf->SetHTMLFooter($footerHtml);
+        $mpdf->WriteHTML('
+            <style>
+                * {
+                    font-family: solaimanlipi, sans-serif !important;
+                    line-height: 1.12;
                 }
-                $headerHtml .= '
-                </td>
-                <td style="border:none; width:85%; text-align:center; vertical-align:middle; padding:0;">
-                    <h2 style="margin:0; font-size:19px; line-height:1.3; font-weight:bold;">' . e($companyName) . '</h2>
-                    <p style="margin:2px 0; font-size:11px; line-height:1.4;">
-                        ' . e($companyAddress) . '<br>
-                        মোবাইল: ' . e($companyPhone) . ($companyEmail ? ' | ইমেইল: ' . e($companyEmail) : '') . '
-                    </p>
-                </td>
-            </tr>
-        </table>
-    ';
-    $mpdf->SetHTMLHeader($headerHtml);
+                body {
+                    font-family: solaimanlipi, sans-serif !important;
+                    font-size: 14px;
+                    margin: 0;
+                    padding: 0;
+                    line-height: 1.12;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                th {
+                    border: 1px solid #999;
+                    padding: 2px 5px;
+                    font-size: 14px;
+                    background-color: #f0f0f0;
+                    font-weight: bold;
+                    line-height: 1.15;
+                }
+                td {
+                    border: 1px solid #999;
+                    padding: 2px 5px;
+                    font-size: 14px;
+                    line-height: 1.15;
+                }
+                h3 {
+                    font-size: 18px;
+                    margin: 4px 0 !important;
+                    line-height: 1.2;
+                    font-weight: bold;
+                }
+                h4 {
+                    font-size: 15px;
+                    margin: 3px 0 !important;
+                    line-height: 1.2;
+                    font-weight: bold;
+                }
+                p {
+                    margin: 1px 0 !important;
+                    font-size: 14px;
+                    line-height: 1.25;
+                }
+                thead { display: table-header-group; }
+                tr { page-break-inside: avoid; }
+            </style>
+        ');
 
-    // Footer
-    $footerHtml = '
-        <div style="text-align:center; border-top:1px solid #000; padding-top:4px; font-size:11px; font-family:solaimanlipi; line-height:1.5;">
-            সফটওয়্যার দ্বারা জেনারেট করা রিপোর্ট | ' . e($companyName) . ' | মোবাইল: ' . e($companyPhone) . '
-            <br>পৃষ্ঠা {PAGENO} / {nbpg}
-        </div>
-    ';
-    $mpdf->SetHTMLFooter($footerHtml);
-    $mpdf->WriteHTML('
-        <style>
-            * {
-                font-family: solaimanlipi, sans-serif !important;
-                line-height: 1.12;
-            }
-            body {
-                font-family: solaimanlipi, sans-serif !important;
-                font-size: 14px;
-                margin: 0;
-                padding: 0;
-                line-height: 1.12;
-            }
-            table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-            th {
-                border: 1px solid #999;
-                padding: 2px 5px;
-                font-size: 14px;
-                background-color: #f0f0f0;
-                font-weight: bold;
-                line-height: 1.15;
-            }
-            td {
-                border: 1px solid #999;
-                padding: 2px 5px;
-                font-size: 14px;
-                line-height: 1.15;
-            }
-            h3 {
-                font-size: 18px;
-                margin: 4px 0 !important;
-                line-height: 1.2;
-                font-weight: bold;
-            }
-            h4 {
-                font-size: 15px;
-                margin: 3px 0 !important;
-                line-height: 1.2;
-                font-weight: bold;
-            }
-            p {
-                margin: 1px 0 !important;
-                font-size: 14px;
-                line-height: 1.25;
-            }
-            thead { display: table-header-group; }
-            tr { page-break-inside: avoid; }
-        </style>
-    ');
+        // Challan Copy
+        if ($printBoth) {
+            $challanHtml = view('sale.pdf_challan_chunked', [
+                'sale'          => $sale,
+                'companyInfo'   => $companyInfo,
+                'printBoth'     => $printBoth,
+                'chunkSize'     => 38,
+            ])->render();
 
-    // Challan Copy
-    if ($printBoth) {
-        $challanHtml = view('sale.pdf_challan_chunked', [
+            $challanHtml = rtrim($challanHtml);
+            $mpdf->WriteHTML($challanHtml);
+            $mpdf->WriteHTML('<pagebreak />');
+        }
+
+        // Bill Copy
+        $billHtml = view('sale.pdf_bill_chunked', [
             'sale'          => $sale,
             'companyInfo'   => $companyInfo,
             'printBoth'     => $printBoth,
             'chunkSize'     => 38,
         ])->render();
 
-        $challanHtml = rtrim($challanHtml);
-        $mpdf->WriteHTML($challanHtml);
-        $mpdf->WriteHTML('<pagebreak />');
+        $billHtml = rtrim($billHtml);
+        $mpdf->WriteHTML($billHtml);
+        $invoice = $sale->invoice_no ?? $sale->id;
+        $invoice = preg_replace('/[^A-Za-z0-9\-]/', '_', $invoice);
+        return $mpdf->output('Sale_' . $invoice . '.pdf', 'D');
     }
-
-    // Bill Copy
-    $billHtml = view('sale.pdf_bill_chunked', [
-        'sale'          => $sale,
-        'companyInfo'   => $companyInfo,
-        'printBoth'     => $printBoth,
-        'chunkSize'     => 38,
-    ])->render();
-
-    $billHtml = rtrim($billHtml);
-    $mpdf->WriteHTML($billHtml);
-    $invoice = $sale->invoice_no ?? $sale->id;
-    $invoice = preg_replace('/[^A-Za-z0-9\-]/', '_', $invoice);
-    return $mpdf->output('Sale_' . $invoice . '.pdf', 'D');
-}
 
 //  ============================================================
 //  PARTIAL PAYMENT PDF
@@ -1385,5 +1319,327 @@ public function partialPaymentPdf($id)
         ]
     );
 }
+
+/**
+ * Customer Transaction History / Ledger
+ */
+
+public function transactionHistory(Request $request)
+{
+$search = trim($request->input('search', ''));
+    $customerId = $request->input('customer_id');
+
+    $customers = collect();
+    $customer = null;
+    $transactions = collect();
+
+if ($customerId) {
+    $customer = Customer::find($customerId);
+
+    if (!$customer) {
+        return redirect()
+            ->route('sale.transactionHistory', [
+                'search' => $search,
+            ])
+            ->with('error', 'নির্বাচিত কাস্টমার পাওয়া যায়নি।');
+    }
+} elseif ($search !== '') {
+    $customerQuery = Customer::query();
+
+    $customerQuery->where(function ($query) use ($search) {
+        $query->where('customer_name', 'LIKE', "%{$search}%")
+              ->orWhere('mobile', 'LIKE', "%{$search}%");
+
+        if (is_numeric($search)) {
+            $query->orWhere('id', $search);
+        }
+    });
+
+    $customers = $customerQuery
+        ->orderBy('customer_name')
+        ->limit(50)
+        ->get();
+
+    if ($customers->count() === 1) {
+        $customer = $customers->first();
+    }
+}
+
+    /*
+    |--------------------------------------------------------------------------
+    | Selected Customer Transactions
+    |--------------------------------------------------------------------------
+    */
+
+    if ($customer) {
+
+        $sales = Sales::with([
+            'receivedPayments',
+        ])
+        ->where('customer_id', $customer->id)
+        ->orderBy('sale_date')
+        ->orderBy('id')
+        ->get();
+
+        $rows = [];
+
+        foreach ($sales as $sale) {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Sale Invoice - Debit
+            |--------------------------------------------------------------------------
+            */
+
+            $rows[] = [
+                'date'          => $sale->sale_date,
+                'sort_order'    => 1,
+                'sort_id'       => $sale->id,
+                'invoice_no'    => $sale->invoice_no,
+                'description'   => 'বিক্রয় / Invoice',
+                'payment_method'=> $sale->payment_method ?? '',
+                'tracking_no'   => '',
+                'debit'         => (float) $sale->total_amount,
+                'credit'        => 0,
+            ];
+
+            /*
+            |--------------------------------------------------------------------------
+            | Initial Payment - Credit
+            |--------------------------------------------------------------------------
+            */
+
+            if ((float) $sale->paid_amount > 0) {
+
+                $rows[] = [
+                    'date'          => $sale->sale_date,
+                    'sort_order'    => 2,
+                    'sort_id'       => $sale->id,
+                    'invoice_no'    => $sale->invoice_no,
+                    'description'   => 'প্রাথমিক জমা',
+                    'payment_method'=> $sale->payment_method ?? '',
+                    'tracking_no'   => '',
+                    'debit'         => 0,
+                    'credit'        => (float) $sale->paid_amount,
+                ];
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Subsequent / Partial Payments - Credit
+            |--------------------------------------------------------------------------
+            */
+
+            foreach ($sale->receivedPayments as $payment) {
+
+                $rows[] = [
+                    'date'          => $payment->received_date,
+                    'sort_order'    => 3,
+                    'sort_id'       => $payment->id,
+                    'invoice_no'    => $sale->invoice_no,
+                    'description'   => 'পরবর্তী জমা',
+                    'payment_method'=> $payment->received_method ?? '',
+                    'tracking_no'   => $payment->tracking_no ?? '',
+                    'debit'         => 0,
+                    'credit'        => (float) $payment->amount,
+                ];
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Sort Transactions
+        |--------------------------------------------------------------------------
+        */
+
+        $transactions = collect($rows)
+            ->sortBy(function ($row) {
+                return [
+                    $row['date'] ? strtotime($row['date']) : 0,
+                    $row['sort_order'],
+                    $row['sort_id'],
+                ];
+            })
+            ->values();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Running Balance
+        |--------------------------------------------------------------------------
+        */
+
+        $balance = 0;
+
+        $transactions = $transactions->map(function ($row) use (&$balance) {
+
+            $balance += $row['debit'];
+            $balance -= $row['credit'];
+
+            $row['balance'] = $balance;
+
+            return $row;
+        });
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Summary
+    |--------------------------------------------------------------------------
+    */
+
+    $totalSales = $transactions->sum('debit');
+    $totalReceived = $transactions->sum('credit');
+
+    // ঋণাত্মক Balance হলে কাস্টমারের অতিরিক্ত জমা রয়েছে
+    $dueAmount = $totalSales - $totalReceived;
+
+return view('sale.transaction-history', compact(
+    'search',
+    'customers',
+    'customer',
+    'transactions',
+    'totalSales',
+    'totalReceived',
+    'dueAmount'
+));
+}
+
+public function transactionHistoryPdf($customerId)
+{
+    $customer = Customer::findOrFail($customerId);
+
+    $sales = Sales::with(['receivedPayments'])
+        ->where('customer_id', $customer->id)
+        ->orderBy('sale_date')
+        ->orderBy('id')
+        ->get();
+
+    $rows = [];
+
+    foreach ($sales as $sale) {
+
+        // Sale Invoice - Debit
+        $rows[] = [
+            'date'           => $sale->sale_date,
+            'sort_order'     => 1,
+            'sort_id'        => $sale->id,
+            'invoice_no'     => $sale->invoice_no,
+            'description'    => 'বিক্রয় / Invoice',
+            'payment_method' => $sale->payment_method ?? '',
+            'tracking_no'    => '',
+            'debit'          => (float) $sale->total_amount,
+            'credit'         => 0,
+        ];
+
+        // Initial Payment - Credit
+        if ((float) $sale->paid_amount > 0) {
+            $rows[] = [
+                'date'           => $sale->sale_date,
+                'sort_order'     => 2,
+                'sort_id'        => $sale->id,
+                'invoice_no'     => $sale->invoice_no,
+                'description'    => 'প্রাথমিক জমা',
+                'payment_method' => $sale->payment_method ?? '',
+                'tracking_no'    => '',
+                'debit'          => 0,
+                'credit'         => (float) $sale->paid_amount,
+            ];
+        }
+
+        // Subsequent / Partial Payments
+        foreach ($sale->receivedPayments as $payment) {
+            $rows[] = [
+                'date'           => $payment->received_date,
+                'sort_order'     => 3,
+                'sort_id'        => $payment->id,
+                'invoice_no'     => $sale->invoice_no,
+                'description'    => 'পরবর্তী জমা',
+                'payment_method' => $payment->received_method ?? '',
+                'tracking_no'    => $payment->tracking_no ?? '',
+                'debit'          => 0,
+                'credit'         => (float) $payment->amount,
+            ];
+        }
+    }
+
+    // Sort transactions
+    $transactions = collect($rows)
+        ->sortBy(function ($row) {
+            return [
+                $row['date'] ? strtotime($row['date']) : 0,
+                $row['sort_order'],
+                $row['sort_id'],
+            ];
+        })
+        ->values();
+
+    // Running Balance
+    $balance = 0;
+    $transactions = $transactions->map(function ($row) use (&$balance) {
+        $balance += $row['debit'];
+        $balance -= $row['credit'];
+        $row['balance'] = $balance;
+        return $row;
+    });
+
+    $totalSales = $transactions->sum('debit');
+    $totalReceived = $transactions->sum('credit');
+    $dueAmount = $totalSales - $totalReceived;
+    $company = CompanyInfo::getInfo();
+    // mPDF temporary directory
+    $tempDir = storage_path('app/mpdf-temp');
+    if (!File::exists($tempDir)) {
+        File::makeDirectory($tempDir, 0755, true);
+    }
+
+    // Custom Bangla font
+    $defaultConfig = (new ConfigVariables())->getDefaults();
+    $fontDirs = $defaultConfig['fontDir'];
+    $defaultFontConfig = (new FontVariables())->getDefaults();
+    $fontData = $defaultFontConfig['fontdata'];
+    $fontPath = public_path('fonts');
+    $mpdf = new Mpdf([
+        'mode' => 'utf-8',
+        'format' => 'A4',
+        'orientation' => 'P',
+        'margin_left' => 10,
+        'margin_right' => 10,
+        'margin_top' => 12,
+        'margin_bottom' => 15,
+        'tempDir' => $tempDir,
+        'fontDir' => array_merge($fontDirs, [$fontPath]),
+        'fontdata' => $fontData + [
+            'solaimanlipi' => [
+                'R' => 'SolaimanLipi.ttf',
+            ],
+        ],
+
+        'default_font' => 'solaimanlipi',
+    ]);
+
+    $mpdf->SetTitle('Customer Transaction History');
+    $html = view('sale.transaction-history-pdf', compact(
+        'customer',
+        'company',
+        'transactions',
+        'totalSales',
+        'totalReceived',
+        'dueAmount'
+    ))->render();
+
+    $mpdf->WriteHTML($html);
+    $fileName = 'customer-transaction-' . $customer->id . '.pdf';
+    return response(
+        $mpdf->Output($fileName, 'S'),
+        200,
+        [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+        ]
+    );
+}
+
+
 
 }

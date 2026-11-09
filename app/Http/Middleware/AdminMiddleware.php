@@ -6,19 +6,19 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
+
 class AdminMiddleware
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
     public function handle(Request $request, Closure $next): Response
     {
-        if(Auth::check() && Auth::user()->type=="admin")
-            {
-                return $next($request);
-            }
-            abort(401,'Unauthorised Access!');
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        if (Auth::user()->type !== 'admin') {
+            abort(403, 'আপনার এই পেজে প্রবেশের অনুমতি নেই।');
+        }
+
+        return $next($request);
     }
 }
